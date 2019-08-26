@@ -74,16 +74,7 @@ class DQN() extends LazyLogging{
   }
 
   def distance(entityA:Set[String], entityB:Set[String]) = {
-    val payload =
-      compact {
-        render {
-          ("A" -> entityA) ~ ("B" -> entityB)
-        }
-      }
 
-    val response = HttpUtils.httpPut("distance", payload)
-
-    response
   }
 
 

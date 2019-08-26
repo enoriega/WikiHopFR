@@ -4,17 +4,20 @@ import com.typesafe.scalalogging.LazyLogging
 import org.ml4ai.{WHConfig, WikiHopInstance}
 import org.ml4ai.inference._
 import org.ml4ai.ir.LuceneHelper
-import org.ml4ai.utils.{AnnotationsLoader, WikiHopParser, filterUselessLemmas}
+import org.ml4ai.utils.{AnnotationsLoader, HttpUtils, WikiHopParser, buildRandom, filterUselessLemmas}
 import org.sarsamora.actions.Action
 import org.sarsamora.environment.Environment
 import org.sarsamora.states.State
-import org.ml4ai.utils.buildRandom
+import org.json4s.JsonDSL._
 
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 import WikiHopEnvironment.buildKnowledgeGraph
+import org.apache.http.client.HttpClient
+import org.apache.http.impl.client.HttpClients
 import org.clulab.embeddings.word2vec
 import org.clulab.embeddings.word2vec.Word2Vec
+import org.json4s.jackson.JsonMethods.{compact, render}
 
 class WikiHopEnvironment(val start:String, val end:String, documentUniverse:Option[Set[String]] = None) extends Environment with LazyLogging {
 
@@ -270,17 +273,19 @@ class WikiHopEnvironment(val start:String, val end:String, documentUniverse:Opti
   }
 
   private def distance(a:Set[String], b:Set[String]):Float = {
-//    ComputationGraph.renew()
-//
-//    val eA = helper.lookup(a).toSeq
-//    val eB = helper.lookup(b).toSeq
-//
-//    val averageA = Expression.average(eA:_*)
-//    val averageB = Expression.average(eB:_*)
-//
-//    Expression.l2Norm(averageA - averageB).value().toFloat()
-    // TODO implement distance in pytorch
-    1.0f
+
+    import WikiHopEnvironment.httpClient
+
+    val payload =
+      compact {
+        render {
+          ("A" -> a) ~ ("B" -> b)
+        }
+      }
+
+    val response = HttpUtils.httpPut("distance", payload)
+
+    response.toFloat
   }
 
   /**
@@ -322,6 +327,7 @@ class WikiHopEnvironment(val start:String, val end:String, documentUniverse:Opti
 
 object WikiHopEnvironment extends LazyLogging {
 
+  implicit val httpClient:HttpClient = HttpClients.createDefault
 
   private def getInstance(data: Iterable[WikiHopInstance], key: String): WikiHopInstance =
     Try(data.filter(_.id == key)) match {
