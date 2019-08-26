@@ -9,7 +9,7 @@ import org.sarsamora.states.State
 import org.json4s.JsonDSL._
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
-import org.apache.http.impl.client.HttpClients
+import org.apache.http.impl.client.{CloseableHttpClient, HttpClients}
 import org.ml4ai.utils._
 
 import scala.io.Source
@@ -18,35 +18,7 @@ import scala.util.{Failure, Success, Try}
 
 class DQN() extends LazyLogging{
 
-  private val httpClient = HttpClients.createDefault
-
-  private def httpPut(method:String, data:String):String = {
-    val request = new HttpPut(s"http://localhost:5000/$method")
-    val content = new StringEntity(data, ContentType.create("text/plain", "UTF-8"))
-
-    request.setEntity(content)
-
-    val response = httpClient.execute(request)
-
-    Try {
-      val entity = response.getEntity
-      if (entity != null) {
-        using(entity.getContent){
-          stream =>
-            Source.fromInputStream(stream).mkString
-        }
-      }
-      else
-        ""
-    } match {
-      case Success(content) =>
-        content
-      case Failure(exception) =>
-        logger.error(exception.getMessage)
-        ""
-    }
-
-  }
+  private implicit val httpClient: CloseableHttpClient = HttpClients.createDefault
 
   // TODO: Reimplement this in pytorch
 
@@ -96,7 +68,20 @@ class DQN() extends LazyLogging{
       }
 
 
-    val response = httpPut("forward", payload)
+    val response = HttpUtils.httpPut("forward", payload)
+
+    response
+  }
+
+  def distance(entityA:Set[String], entityB:Set[String]) = {
+    val payload =
+      compact {
+        render {
+          ("A" -> entityA) ~ ("B" -> entityB)
+        }
+      }
+
+    val response = HttpUtils.httpPut("distance", payload)
 
     response
   }
