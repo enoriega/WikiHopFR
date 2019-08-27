@@ -272,19 +272,21 @@ class WikiHopEnvironment(val start:String, val end:String, documentUniverse:Opti
       this.knowledgeGraph = Some(buildKnowledgeGraph(docs))
   }
 
-  private def distance(a:Set[String], b:Set[String]):Float = {
+  private def distance(pairs:Seq[(Set[String], Set[String])]):Float = {
 
     import WikiHopEnvironment.httpClient
 
     val payload =
       compact {
         render {
-          ("A" -> a) ~ ("B" -> b)
+          for((a, b) <- pairs) yield
+            ("A" -> a) ~ ("B" -> b)
         }
       }
 
     val response = HttpUtils.httpPut("distance", payload)
 
+    // TODO: Correct this to deserialize json into a seq of floats
     response.toFloat
   }
 
