@@ -20,28 +20,9 @@ class DQN() extends LazyLogging{
 
   private implicit val httpClient: CloseableHttpClient = HttpClients.createDefault
 
-  def apply(input:(WikiHopState, Set[String], Set[String])): Any = this(Seq(input))
+  def apply(input:(WikiHopState, Set[String], Set[String])): (Float, Float) = this(Seq(input)).head
 
-  def apply(input:Iterable[(WikiHopState, Set[String], Set[String])]):Any = {
-
-//    val inputVectors = input.toSeq map {
-//      case (state, entityA, entityB) =>
-//        val features = vectorizeState(state)
-//        val featureVector = Expression.input(Dim(features.size), features)
-//        val embA = embeddingsHelper.lookup(entityA)
-//        val embB = embeddingsHelper.lookup(entityB)
-//
-//        Expression.concatenate(featureVector, aggregateEmbeddings(embA), aggregateEmbeddings(embB))
-//    }
-//
-//    val inputMatrix = Expression.concatenateCols(inputVectors:_*)
-//
-//    val W = Expression.parameter(pW)
-//    val b = Expression.parameter(pb)
-//    val X = Expression.parameter(pX)
-//    val c = Expression.parameter(pc)
-//
-//    X * Expression.tanh(W*inputMatrix + b) + c
+  def apply(input:Iterable[(WikiHopState, Set[String], Set[String])]):Seq[(Float, Float)] = {
 
     val payload =
       compact {
@@ -55,13 +36,16 @@ class DQN() extends LazyLogging{
         }
       }
 
-
     val response = HttpUtils.httpPut("forward", payload)
 
-    response
+    for {
+      JArray(values) <- parse(response)
+      JObject(value) <- values
+      ("Exploration", JDouble(exploration)) <- value
+      ("Exploitation", JDouble(exploitation)) <- value
+    } yield (exploration.toFloat, exploitation.toFloat)
+
   }
-
-
 
 }
 
