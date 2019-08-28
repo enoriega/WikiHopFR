@@ -20,18 +20,6 @@ class DQN() extends LazyLogging{
 
   private implicit val httpClient: CloseableHttpClient = HttpClients.createDefault
 
-  // TODO: Reimplement this in pytorch
-
-//  private val embeddingsDimension = embeddingsHelper.embeddingsDim
-//  private val featuresDimension = WikiHopState.numFeatures
-//  private val featureVectorSize = 2*embeddingsDimension + featuresDimension
-//
-//  private val pW = params.addParameters(Dim(10, featureVectorSize))
-//  private val pb = params.addParameters(Dim(10))
-//  private val pX = params.addParameters(Dim(2, 10))
-//  private val pc = params.addParameters(Dim(2))
-
-
   def apply(input:(WikiHopState, Set[String], Set[String])): Any = this(Seq(input))
 
   def apply(input:Iterable[(WikiHopState, Set[String], Set[String])]):Any = {
@@ -71,10 +59,6 @@ class DQN() extends LazyLogging{
     val response = HttpUtils.httpPut("forward", payload)
 
     response
-  }
-
-  def distance(entityA:Set[String], entityB:Set[String]) = {
-
   }
 
 

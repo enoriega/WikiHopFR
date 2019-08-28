@@ -9,6 +9,7 @@ import org.sarsamora.actions.Action
 import org.sarsamora.environment.Environment
 import org.sarsamora.states.State
 import org.json4s.JsonDSL._
+import org.json4s.native.JsonMethods._
 
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
@@ -17,6 +18,7 @@ import org.apache.http.client.HttpClient
 import org.apache.http.impl.client.HttpClients
 import org.clulab.embeddings.word2vec
 import org.clulab.embeddings.word2vec.Word2Vec
+import org.json4s.JsonAST.{JArray, JDouble}
 import org.json4s.jackson.JsonMethods.{compact, render}
 
 class WikiHopEnvironment(val start:String, val end:String, documentUniverse:Option[Set[String]] = None) extends Environment with LazyLogging {
@@ -272,7 +274,7 @@ class WikiHopEnvironment(val start:String, val end:String, documentUniverse:Opti
       this.knowledgeGraph = Some(buildKnowledgeGraph(docs))
   }
 
-  private def distance(pairs:Seq[(Set[String], Set[String])]):Float = {
+  private def distance(pairs:Seq[(Set[String], Set[String])]):Seq[Float] = {
 
     import WikiHopEnvironment.httpClient
 
@@ -286,8 +288,13 @@ class WikiHopEnvironment(val start:String, val end:String, documentUniverse:Opti
 
     val response = HttpUtils.httpPut("distance", payload)
 
-    // TODO: Correct this to deserialize json into a seq of floats
-    response.toFloat
+    val ret =
+      for{
+        JArray(vals) <- parse(response)
+        JDouble(distance) <- vals
+      } yield distance.toFloat
+
+    ret
   }
 
   /**
@@ -308,20 +315,26 @@ class WikiHopEnvironment(val start:String, val end:String, documentUniverse:Opti
             candidate <- knowledgeGraph.get.entities
           } yield { Seq((lastA, candidate), (lastB, candidate))}
 
-        // TODO: Clean this code for legibility
-        newPairs.toSeq.flatten.withFilter{
-          case (a, b) =>
-            if(a == b)
-              false
-            else if(previouslyChosen contains ((a, b)))
-              false
-            else if(previouslyChosen contains ((b, a)))
-              false
-            else
-              true
-        }.map{
-          case (a, b) => (a, b, distance(a, b))
-        }.sortBy(_._3).take(WHConfig.Environment.topEntitiesNum).map(_._2)
+
+        // Filter out the elements that have been tested before
+        val pairsToTest =
+          newPairs.toSeq.flatten.filter{
+            case (a, b) =>
+              if(a == b)
+                false
+              else if(previouslyChosen contains ((a, b)))
+                false
+              else if(previouslyChosen contains ((b, a)))
+                false
+              else
+                true
+          }
+
+        // Compute their distances in vector space
+        val distances = distance(pairsToTest)
+
+        // Take the top N entities by their distance
+        (pairsToTest zip distances).sortBy(_._2).take(WHConfig.Environment.topEntitiesNum).map(_._1._2)
     }
   }
 
