@@ -208,19 +208,6 @@ class WikiHopEnvironment(val start:String, val end:String, documentUniverse:Opti
     WikiHopState(iterationNum, numNodes, numEdges, startTokens, endTokens, Some(topEntities))
   }
 
-//  // TODO Deprecate this
-//  override def observeState: State = {
-//    val (numNodes, numEdges) = knowledgeGraph match {
-//      case Some(kg) =>
-//        (kg.entities.size, kg.edges.size)
-//      case None =>
-//        (0, 0)
-//    }
-//
-//    // TODO Complete this definition with the rest of the features
-//    WikiHopState(iterationNum, numNodes, numEdges, startTokens, endTokens, None)
-//  }
-
   override def finishedEpisode: Boolean = {
     if(iterationNum >= maxIterations)
       true

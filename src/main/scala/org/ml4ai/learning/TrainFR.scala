@@ -30,15 +30,10 @@ object TrainFR extends App with LazyLogging{
 
   /**
     * Updates the network with a minibatch
-    * @param network
     */
   def updateParameters(network:DQN)(implicit rng:Random):Unit = {
     // Sample a mini batch
     val miniBatch = memory.sample(1000)
-
-    // TODO: Refactor this parameter
-    val GAMMA = .9
-
 
     val payload =
       compact {
@@ -71,54 +66,6 @@ object TrainFR extends App with LazyLogging{
 
     HttpUtils.httpPut("backwards", payload)
 
-//    val payload =
-//    val nextStateValues = ??? // TODO figure out this correctly, this considers the state values of all the possible entity combinations, not just only of  the ones with the top entity
-//      max{
-//        network{
-//          nextStates.flatMap{
-//            ns =>
-//              val entityPairs =
-//                for {
-//                  ea <- ns.candidateEntities.get
-//                  eb <- ns.candidateEntities.get
-//                } yield (ea, eb)
-//
-//              val ret = entityPairs.toSet.map{
-//                ep:(Set[String], Set[String]) =>
-//                  ep match {
-//                    case (ea, eb) => (ns, ea, eb)
-//                  }
-//              }
-//              ret
-//          }
-//        }.value()
-//      }
-
-//    val updates = (rewards zip nextStateValues) map { case (r, q) => r + GAMMA*q}
-//
-//    val actions = miniBatch.map(_.action)
-//
-//    // Import this to make the code below more readable
-//    import DQN.actionIndex
-//
-//    val targetStateValuesData =
-//      // TODO Clean this, factor out the hard-coded num 2.
-//      for(((action, tv), u) <- (actions zip stateValues.value().toSeq().grouped(2).toSeq).zip(updates) ) yield {
-//        val ret = tv.toArray
-//        ret(action) = u.toFloat // TODO: Select the correct action
-//        ret
-//      }
-
-//    val targetStateValues = Expression.input(stateValues.dim(), FloatVector.Seq2FloatVector(targetStateValuesData.flatten.toSeq))
-
-//    val loss = mseLoss(stateValues, targetStateValues)
-
-
-//    ComputationGraph.backward(loss)
-
-//    optimizer.update()
-
-    // TODO: Implement this in pytorch
   }
 
 
@@ -134,7 +81,6 @@ object TrainFR extends App with LazyLogging{
   val policy = new EpGreedyPolicy(Decays.exponentialDecay(WHConfig.Training.Epsilon.upperBound, WHConfig.Training.Epsilon.lowerBound, numEpisodes*10, 0).iterator, network)
   val memory = new TransitionMemory[Transition](maxSize = WHConfig.Training.transitionMemorySize)
 
-  // TODO: Implement this
   val instance = selectSmall(instances)
 
   val trainingObserver: AgentObserver = new AgentObserver {
@@ -145,7 +91,7 @@ object TrainFR extends App with LazyLogging{
 
     override def beforeTakingAction(action: Action, env: WikiHopEnvironment): Unit = {
       // Save the state observation before taking the action
-      state = Some(env.observeState.asInstanceOf[WikiHopState])
+      state = Some(env.observeState)
     }
 
     override def actionTaken(action: Action, reward: Float, numDocsAdded: Int, env: WikiHopEnvironment): Unit = ()
@@ -153,7 +99,7 @@ object TrainFR extends App with LazyLogging{
 
     override def concreteActionTaken(action: Action, reward: Float, numDocsAdded: Int, env: WikiHopEnvironment): Unit = {
       assert(state.isDefined, "The state should be defined at this point")
-      val newState = env.observeState.asInstanceOf[WikiHopState]
+      val newState = env.observeState
       val transition = Transition(state.get, action, reward, newState)
       memory remember transition
       state = None
