@@ -1,18 +1,24 @@
 package org.ml4ai.learning
 
 import com.typesafe.scalalogging.LazyLogging
+import org.apache.http.impl.client.{CloseableHttpClient, HttpClients}
 import org.ml4ai.{WHConfig, WikiHopInstance}
 import org.ml4ai.agents.{AgentObserver, EpGreedyPolicy, PolicyAgent}
 import org.ml4ai.mdp.{Exploitation, Exploration, ExplorationDouble, WikiHopEnvironment, WikiHopState}
-import org.ml4ai.utils.{TransitionMemory, WikiHopParser, rng}
+import org.ml4ai.utils.{HttpUtils, TransitionMemory, WikiHopParser, rng}
 import org.sarsamora.Decays
 import org.sarsamora.actions.Action
 import org.sarsamora.states.State
 import sun.reflect.generics.reflectiveObjects.NotImplementedException
+import org.json4s.JsonDSL._
+import org.json4s._
+import org.json4s.jackson.JsonMethods._
 
 import scala.util.Random
 
 object TrainFR extends App with LazyLogging{
+
+  private implicit val httpClient: CloseableHttpClient = HttpClients.createDefault
 
   def selectSmall(instances: Seq[WikiHopInstance]) = instances.head // TODO: implement this correctly
 
@@ -34,27 +40,39 @@ object TrainFR extends App with LazyLogging{
     val GAMMA = .9
 
 
-    // Get the states from the batch and the entities associated to the action taken on that transition
-    val states = miniBatch map { m => m.state}
-    val selectedEntities = miniBatch map {
-      tr =>
-        tr.action match {
-          case Exploration(single) => (single, single)
-          case ExplorationDouble(entityA, entityB) => (entityA, entityB)
-          case Exploitation(entityA, entityB) => (entityA, entityB)
-          case _ => throw new NotImplementedException
+    val payload =
+      compact {
+        render {
+          miniBatch map {
+            case Transition(state, action, reward, nextState) =>
+
+              val features = state.toFeatures
+
+              val (entityA, entityB) = action match {
+                case Exploration(single) => (single, single)
+                case ExplorationDouble(entityA, entityB) => (entityA, entityB)
+                case Exploitation(entityA, entityB) => (entityA, entityB)
+                case _ => throw new NotImplementedException
+              }
+
+              ("state" ->
+                ("features" -> features) ~ ("A" -> entityA) ~ ("B" -> entityB)) ~
+                ("action" ->
+                  (action match {
+                    case _: Exploitation => "exploitation"
+                    case _ => "exploration"
+                  })) ~
+                ("reward" -> reward) ~
+                ("new_state" ->
+                  ("features" -> nextState.toFeatures) ~ ("candidates" -> nextState.candidateEntities.get))
+          }
         }
-    }
+      }
 
-    // Compute the state action values for all the actions of that (state, entities) argument
-    val stateValues = network((states zip selectedEntities) map { case(s, (ea, eb)) => (s, ea, eb) })
+    HttpUtils.httpPut("backwards", payload)
 
-    // Fetch the observed reward of that transition
-    val rewards = miniBatch map { _.reward }
-
-    // Fetch the resulting state of the transitions
-    val nextStates = miniBatch map { m => m.nextState }
-    val nextStateValues = ??? // TODO figure out this correctly, this considers the state values of all the possible entity combinations, not just only of  the ones with the top entity
+//    val payload =
+//    val nextStateValues = ??? // TODO figure out this correctly, this considers the state values of all the possible entity combinations, not just only of  the ones with the top entity
 //      max{
 //        network{
 //          nextStates.flatMap{
