@@ -112,6 +112,7 @@ object TrainFR extends App with LazyLogging{
     }
   }
 
+  val checkpointName = WHConfig.Training.modelName
   var successes = 0
 
   for(ep <- 1 to numEpisodes){
@@ -129,6 +130,8 @@ object TrainFR extends App with LazyLogging{
         logger.info(s"Success rate of $successRate for the last 100 episodes")
         successes = 0
         updateParameters(network)
+        logger.info(s"Saving checkpoint as $checkpointName")
+        network.save(checkpointName)
       }
     }
   }

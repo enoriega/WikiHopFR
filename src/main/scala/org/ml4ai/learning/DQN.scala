@@ -47,6 +47,10 @@ class DQN() extends LazyLogging{
 
   }
 
+  def save(name:String):Unit = {
+    HttpUtils.saveModel(name)
+  }
+
 }
 
 object DQN {
