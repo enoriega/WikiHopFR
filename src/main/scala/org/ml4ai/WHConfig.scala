@@ -86,4 +86,9 @@ object WHConfig {
       val lowerBound:Double = g.getDouble("lowerBound")
     }
   }
+
+  object HttpClient {
+    private val f = config.getConfig("httpClient")
+    val server:String = f.getString("server")
+  }
 }
