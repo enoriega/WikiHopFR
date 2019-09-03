@@ -4,19 +4,22 @@ import com.typesafe.scalalogging.LazyLogging
 import org.ml4ai.{WHConfig, WikiHopInstance}
 import org.ml4ai.inference._
 import org.ml4ai.ir.LuceneHelper
-import org.ml4ai.utils.{AnnotationsLoader, WikiHopParser, filterUselessLemmas}
+import org.ml4ai.utils.{AnnotationsLoader, HttpUtils, WikiHopParser, buildRandom, filterUselessLemmas}
 import org.sarsamora.actions.Action
 import org.sarsamora.environment.Environment
 import org.sarsamora.states.State
-import org.ml4ai.utils.buildRandom
+import org.json4s.JsonDSL._
+import org.json4s.native.JsonMethods._
 
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 import WikiHopEnvironment.buildKnowledgeGraph
-import edu.cmu.dynet.{ComputationGraph, Expression}
+import org.apache.http.client.HttpClient
+import org.apache.http.impl.client.HttpClients
 import org.clulab.embeddings.word2vec
 import org.clulab.embeddings.word2vec.Word2Vec
-import org.ml4ai.learning.EmbeddingsHelper
+import org.json4s.JsonAST.{JArray, JDouble}
+import org.json4s.jackson.JsonMethods.{compact, render}
 
 class WikiHopEnvironment(val start:String, val end:String, documentUniverse:Option[Set[String]] = None) extends Environment with LazyLogging {
 
@@ -193,7 +196,7 @@ class WikiHopEnvironment(val start:String, val end:String, documentUniverse:Opti
   }
 
 
-  def observeState(implicit eh:EmbeddingsHelper):WikiHopState = {
+  def observeState:WikiHopState = {
     val (numNodes, numEdges) = knowledgeGraph match {
       case Some(kg) =>
         (kg.entities.size, kg.edges.size)
@@ -203,19 +206,6 @@ class WikiHopEnvironment(val start:String, val end:String, documentUniverse:Opti
 
     // TODO Complete this definition with the rest of the features
     WikiHopState(iterationNum, numNodes, numEdges, startTokens, endTokens, Some(topEntities))
-  }
-
-  // TODO Deprecate this
-  override def observeState: State = {
-    val (numNodes, numEdges) = knowledgeGraph match {
-      case Some(kg) =>
-        (kg.entities.size, kg.edges.size)
-      case None =>
-        (0, 0)
-    }
-
-    // TODO Complete this definition with the rest of the features
-    WikiHopState(iterationNum, numNodes, numEdges, startTokens, endTokens, None)
   }
 
   override def finishedEpisode: Boolean = {
@@ -271,22 +261,33 @@ class WikiHopEnvironment(val start:String, val end:String, documentUniverse:Opti
       this.knowledgeGraph = Some(buildKnowledgeGraph(docs))
   }
 
-  private def distance(a:Set[String], b:Set[String], helper:EmbeddingsHelper):Float = {
-    ComputationGraph.renew()
+  private def distance(pairs:Seq[(Set[String], Set[String])]):Seq[Float] = {
 
-    val eA = helper.lookup(a).toSeq
-    val eB = helper.lookup(b).toSeq
+    import WikiHopEnvironment.httpClient
 
-    val averageA = Expression.average(eA:_*)
-    val averageB = Expression.average(eB:_*)
+    val payload =
+      compact {
+        render {
+          for((a, b) <- pairs) yield
+            ("A" -> a) ~ ("B" -> b)
+        }
+      }
 
-    Expression.l2Norm(averageA - averageB).value().toFloat()
+    val response = HttpUtils.httpPut("distance", payload)
+
+    val ret =
+      for{
+        JArray(vals) <- parse(response)
+        JDouble(distance) <- vals
+      } yield distance.toFloat
+
+    ret
   }
 
   /**
     * @return top entities to be considered as target of an action
     */
-  def topEntities(implicit helper:EmbeddingsHelper):Seq[Set[String]] = {
+  def topEntities:Seq[Set[String]] = {
     // Fetch the last set of entities chosen
     entitySelectionList match {
       // If there are no entities selected yet, return the end points
@@ -301,20 +302,26 @@ class WikiHopEnvironment(val start:String, val end:String, documentUniverse:Opti
             candidate <- knowledgeGraph.get.entities
           } yield { Seq((lastA, candidate), (lastB, candidate))}
 
-        // TODO: Clean this code for legibility
-        newPairs.toSeq.flatten.withFilter{
-          case (a, b) =>
-            if(a == b)
-              false
-            else if(previouslyChosen contains ((a, b)))
-              false
-            else if(previouslyChosen contains ((b, a)))
-              false
-            else
-              true
-        }.map{
-          case (a, b) => (a, b, distance(a, b, helper))
-        }.sortBy(_._3).take(WHConfig.Environment.topEntitiesNum).map(_._2)
+
+        // Filter out the elements that have been tested before
+        val pairsToTest =
+          newPairs.toSeq.flatten.filter{
+            case (a, b) =>
+              if(a == b)
+                false
+              else if(previouslyChosen contains ((a, b)))
+                false
+              else if(previouslyChosen contains ((b, a)))
+                false
+              else
+                true
+          }
+
+        // Compute their distances in vector space
+        val distances = distance(pairsToTest)
+
+        // Take the top N entities by their distance
+        (pairsToTest zip distances).sortBy(_._2).take(WHConfig.Environment.topEntitiesNum).map(_._1._2)
     }
   }
 
@@ -322,6 +329,7 @@ class WikiHopEnvironment(val start:String, val end:String, documentUniverse:Opti
 
 object WikiHopEnvironment extends LazyLogging {
 
+  implicit val httpClient:HttpClient = HttpClients.createDefault
 
   private def getInstance(data: Iterable[WikiHopInstance], key: String): WikiHopInstance =
     Try(data.filter(_.id == key)) match {

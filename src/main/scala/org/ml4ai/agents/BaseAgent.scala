@@ -3,7 +3,6 @@ package org.ml4ai.agents
 import org.ml4ai.{WHConfig, WikiHopInstance}
 import org.ml4ai.inference.VerboseRelation
 import org.ml4ai.ir.LuceneHelper
-import org.ml4ai.learning.EmbeddingsHelper
 import org.ml4ai.mdp.WikiHopEnvironment
 import org.sarsamora.actions.Action
 import org.ml4ai.utils.{SupportDocs, WikiHopParser, buildRandom, md5Hash}

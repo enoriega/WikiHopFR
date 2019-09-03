@@ -1,12 +1,11 @@
 package org.ml4ai.agents
 import org.ml4ai.agents.baseline.DeterministicAgent
-import org.ml4ai.learning.EmbeddingsHelper
 import org.ml4ai.mdp.{WikiHopEnvironment, WikiHopState}
 import org.sarsamora.actions.Action
 
 import scala.util.Random
 
-class PolicyAgent(policy:EpGreedyPolicy)(implicit rng:Random, embeddingsHelper: EmbeddingsHelper) extends DeterministicAgent {
+class PolicyAgent(policy:EpGreedyPolicy)(implicit rng:Random) extends DeterministicAgent {
   /**
     * Selects an action from those available from the environment within runEpoch
     *

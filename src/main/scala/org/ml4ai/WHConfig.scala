@@ -77,6 +77,7 @@ object WHConfig {
     val episodes: Int = f.getInt("episodes")
     val targetUpdate: Int = f.getInt("targetUpdate")
     val transitionMemorySize: Int = f.getInt("transitionMemorySize")
+    val modelName: String = f.getString("modelName")
 
     object Epsilon {
       private val g = f.getConfig("epsilon")
