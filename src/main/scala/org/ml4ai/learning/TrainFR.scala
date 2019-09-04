@@ -2,17 +2,15 @@ package org.ml4ai.learning
 
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.http.impl.client.{CloseableHttpClient, HttpClients}
-import org.ml4ai.{WHConfig, WikiHopInstance}
+import org.json4s.JsonDSL._
+import org.json4s.jackson.JsonMethods._
 import org.ml4ai.agents.{AgentObserver, EpGreedyPolicy, PolicyAgent}
-import org.ml4ai.mdp.{Exploitation, Exploration, ExplorationDouble, WikiHopEnvironment, WikiHopState}
+import org.ml4ai.mdp._
 import org.ml4ai.utils.{HttpUtils, TransitionMemory, WikiHopParser, rng}
+import org.ml4ai.{WHConfig, WikiHopInstance}
 import org.sarsamora.Decays
 import org.sarsamora.actions.Action
-import org.sarsamora.states.State
 import sun.reflect.generics.reflectiveObjects.NotImplementedException
-import org.json4s.JsonDSL._
-import org.json4s._
-import org.json4s.jackson.JsonMethods._
 
 import scala.util.Random
 
@@ -20,13 +18,19 @@ object TrainFR extends App with LazyLogging{
 
   private implicit val httpClient: CloseableHttpClient = HttpClients.createDefault
 
-  def selectSmall(instances: Seq[WikiHopInstance]) = instances.head // TODO: implement this correctly
+  def selectSmall(instances: Seq[WikiHopInstance]):Iterable[WikiHopInstance] = {
+    instances filter {
+      instance =>
+        val size = instance.supportDocs.size
+        20 >= size && size >= 15
+    }
+  }
 
   /**
     * Tests whether the parameters converged since the last update
     * @return
     */
-  def converged = false // TODO: Implement this correctly
+  def converged = false // TODO: Implement this correctly or remove
 
   /**
     * Updates the network with a minibatch
@@ -81,7 +85,8 @@ object TrainFR extends App with LazyLogging{
   val policy = new EpGreedyPolicy(Decays.exponentialDecay(WHConfig.Training.Epsilon.upperBound, WHConfig.Training.Epsilon.lowerBound, numEpisodes*10, 0).iterator, network)
   val memory = new TransitionMemory[Transition](maxSize = WHConfig.Training.transitionMemorySize)
 
-  val instance = selectSmall(instances)
+  val smallInstances = selectSmall(instances) take (100)
+  val streamIterator = Stream.continually(smallInstances.toStream).flatten.iterator
 
   val trainingObserver: AgentObserver = new AgentObserver {
 
@@ -119,6 +124,7 @@ object TrainFR extends App with LazyLogging{
     if(!converged || ep < targetUpdate) {
       logger.info(s"Epoch $ep")
       val agent = new PolicyAgent(policy)
+      val instance = streamIterator.next()
       val outcome = agent.runEpisode(instance, Some(trainingObserver))
 
       val successful = outcome.nonEmpty
@@ -127,7 +133,7 @@ object TrainFR extends App with LazyLogging{
 
       if (ep % targetUpdate == 0) {
         val successRate = successes / targetUpdate.toFloat
-        logger.info(s"Success rate of $successRate for the last 100 episodes")
+        logger.info(s"Success rate of $successRate for the last $targetUpdate episodes")
         successes = 0
         updateParameters(network)
         logger.info(s"Saving checkpoint as $checkpointName")
