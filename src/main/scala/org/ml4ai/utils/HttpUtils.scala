@@ -42,10 +42,7 @@ object HttpUtils extends LazyLogging{
   }
 
   def saveModel(name:String)(implicit httpClient:HttpClient):String = {
-    val request = new HttpPost(s"$endpoint/save?name=$name") // TODO: Parameterize the endpoint
-//    val content = new StringEntity(data, ContentType.create("text/plain", "UTF-8"))
-//    request.setEntity(content)
-
+    val request = new HttpPost(s"$endpoint/save?name=$name")
     val response = httpClient.execute(request)
 
     Try {

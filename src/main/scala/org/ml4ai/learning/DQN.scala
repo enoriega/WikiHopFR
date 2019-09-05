@@ -1,7 +1,7 @@
 package org.ml4ai.learning
 
 import com.typesafe.scalalogging.LazyLogging
-import org.apache.http.client.methods.HttpPut
+import org.apache.http.client.methods.{HttpGet, HttpPost, HttpPut}
 import org.apache.http.entity.{ContentType, StringEntity}
 import org.ml4ai.mdp.{Exploitation, Exploration, ExplorationDouble, WikiHopState}
 import org.sarsamora.actions.Action
@@ -10,6 +10,8 @@ import org.json4s.JsonDSL._
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 import org.apache.http.impl.client.{CloseableHttpClient, HttpClients}
+import org.ml4ai.WHConfig
+import org.ml4ai.utils.HttpUtils.endpoint
 import org.ml4ai.utils._
 
 import scala.io.Source
@@ -51,6 +53,11 @@ class DQN() extends LazyLogging{
     HttpUtils.saveModel(name)
   }
 
+  def reset(): Unit = {
+    val endpoint = WHConfig.HttpClient.server
+    val request = new HttpGet(s"$endpoint/reset")
+    val response = httpClient.execute(request)
+  }
 }
 
 object DQN {
