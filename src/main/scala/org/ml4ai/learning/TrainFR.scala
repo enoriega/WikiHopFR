@@ -11,7 +11,9 @@ import org.ml4ai.{WHConfig, WikiHopInstance}
 import org.sarsamora.Decays
 import org.sarsamora.actions.Action
 import sun.reflect.generics.reflectiveObjects.NotImplementedException
+import org.ml4ai.utils.using
 
+import scala.io.Source
 import scala.util.Random
 
 object TrainFR extends App with LazyLogging{
@@ -19,11 +21,12 @@ object TrainFR extends App with LazyLogging{
   private implicit val httpClient: CloseableHttpClient = HttpClients.createDefault
 
   def selectSmall(instances: Seq[WikiHopInstance]):Iterable[WikiHopInstance] = {
-    instances filter {
-      instance =>
-        val size = instance.supportDocs.size
-        20 >= size && size >= 15
-    }
+    val names =
+      using(Source.fromFile("small_instances.txt")){
+        s =>
+          s.getLines().toSet
+      }
+    instances filter (i => names contains (i.id))
   }
 
   /**
@@ -86,7 +89,7 @@ object TrainFR extends App with LazyLogging{
   val policy = new EpGreedyPolicy(Decays.exponentialDecay(WHConfig.Training.Epsilon.upperBound, WHConfig.Training.Epsilon.lowerBound, numEpisodes*10, 0).iterator, network)
   val memory = new TransitionMemory[Transition](maxSize = WHConfig.Training.transitionMemorySize)
 
-  val smallInstances = selectSmall(instances) take (1)
+  val smallInstances = selectSmall(instances)
   val streamIterator = Stream.continually(smallInstances.toStream).flatten.iterator
 
   val trainingObserver: AgentObserver = new AgentObserver {
