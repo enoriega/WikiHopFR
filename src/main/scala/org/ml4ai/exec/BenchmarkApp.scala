@@ -11,7 +11,7 @@ import org.ml4ai.utils.{BenchmarkStats, StatsDatum, WikiHopParser, rng}
 import concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
-import org.ml4ai.utils.BenchmarkStats.prettyPrintMap
+import org.ml4ai.utils.prettyPrintMap
 
 /**
   * Runs an agent over all the training instances of WikiHop and reports results

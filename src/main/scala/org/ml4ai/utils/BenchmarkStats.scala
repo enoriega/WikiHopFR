@@ -115,15 +115,3 @@ class BenchmarkStats(data:Iterable[StatsDatum])  extends Serializable {
   }
 
 }
-
-object BenchmarkStats {
-  def prettyPrintMap[K](m:Map[K, Int]):String = {
-    val buf = new mutable.StringBuilder("\n")
-    val entries = m.toSeq.sortBy{case (k, v) => v}.reverse
-    entries foreach {
-      case (k, v) =>
-        buf.append(s"$k: $v\n")
-    }
-    buf.toString()
-  }
-}

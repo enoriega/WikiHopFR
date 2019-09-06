@@ -12,6 +12,7 @@ import org.sarsamora.Decays
 import org.sarsamora.actions.Action
 import sun.reflect.generics.reflectiveObjects.NotImplementedException
 import org.ml4ai.utils.using
+import org.ml4ai.utils.prettyPrintMap
 
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
@@ -135,9 +136,24 @@ object TrainFR extends App with LazyLogging{
   val checkpointName = WHConfig.Training.modelName
   var successes = 0
 
+  def computeStats(stats: Seq[EpisodeStats]):(Map[Int, Int], Map[Int, Int]) = {
+    val (iterations, papersRead) =
+      (stats map {
+        s =>
+          (s.iterations, s.papersRead)
+      }).toSeq.unzip
+
+    val iterationsDist =
+      iterations.groupBy(identity).mapValues(_.size)
+    val papersDist =
+      papersRead.groupBy(identity).mapValues(_.size)
+
+    (iterationsDist, papersDist)
+  }
+
   for(ep <- 1 to numEpisodes){
     if(!converged || ep < targetUpdate) {
-      logger.info(s"Epoch $ep")
+      logger.debug(s"Epoch $ep")
       val agent = new PolicyAgent(policy)
       val instance = streamIterator.next()
       val outcome = agent.runEpisode(instance, Some(trainingObserver))
@@ -150,6 +166,10 @@ object TrainFR extends App with LazyLogging{
         val successRate = successes / targetUpdate.toFloat
         logger.info(s"Success rate of $successRate for the last $targetUpdate episodes")
         successes = 0
+        val (iterationDist, documentDist) = computeStats(stats)
+        logger.info(s"Iterations:\n${prettyPrintMap(iterationDist)}")
+        logger.info(s"Papers read:\n${prettyPrintMap(documentDist)}")
+        stats.clear()
         updateParameters(network)
         logger.info(s"Saving checkpoint as $checkpointName")
         network.save(checkpointName)

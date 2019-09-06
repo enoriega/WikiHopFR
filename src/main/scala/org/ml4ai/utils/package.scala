@@ -4,6 +4,7 @@ import java.security.MessageDigest
 
 import org.clulab.processors.shallownlp.ShallowNLPProcessor
 
+import scala.collection.mutable
 import scala.io.Source
 import scala.language.reflectiveCalls
 import scala.util.hashing.MurmurHash3
@@ -62,5 +63,15 @@ package object utils {
 
   // Global random number generator
   implicit lazy val rng: Random = buildRandom()
+
+  def prettyPrintMap[K](m:Map[K, Int]):String = {
+    val buf = new mutable.StringBuilder("\n")
+    val entries = m.toSeq.sortBy{case (k, v) => v}.reverse
+    entries foreach {
+      case (k, v) =>
+        buf.append(s"$k:\t$v\n")
+    }
+    buf.toString()
+  }
 
 }
