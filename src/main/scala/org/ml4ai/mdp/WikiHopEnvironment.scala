@@ -21,13 +21,13 @@ import org.clulab.embeddings.word2vec.Word2Vec
 import org.json4s.JsonAST.{JArray, JDouble}
 import org.json4s.jackson.JsonMethods.{compact, render}
 
-class WikiHopEnvironment(val start:String, val end:String, documentUniverse:Option[Set[String]] = None) extends Environment with LazyLogging {
+class WikiHopEnvironment(val id:String, val start:String, val end:String, documentUniverse:Option[Set[String]] = None) extends Environment with LazyLogging {
 
   private implicit val loader:AnnotationsLoader = WikiHopEnvironment.annotationsLoader
 
 
   def this(wikiHopKey:String) {
-    this(WikiHopEnvironment.getTrainingInstance(wikiHopKey).query.split(" ").last, WikiHopEnvironment.getTrainingInstance(wikiHopKey).answer.get)
+    this(wikiHopKey, WikiHopEnvironment.getTrainingInstance(wikiHopKey).query.split(" ").last, WikiHopEnvironment.getTrainingInstance(wikiHopKey).answer.get)
   }
 
 

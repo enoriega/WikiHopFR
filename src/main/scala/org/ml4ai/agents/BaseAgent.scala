@@ -64,7 +64,7 @@ abstract class BaseAgent(implicit rnd:Random) {
 
     // Build the environment with the source and destination
     // This is public as the MDP handler needs it
-    val environment: WikiHopEnvironment = new WikiHopEnvironment(source, destination, documentUniverse)
+    val environment: WikiHopEnvironment = new WikiHopEnvironment(instance.id, source, destination, documentUniverse)
 
     runEpisode(environment, monitor)
   }

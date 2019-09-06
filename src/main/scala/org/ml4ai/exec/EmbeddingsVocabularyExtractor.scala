@@ -27,7 +27,7 @@ object EmbeddingsVocabularyExtractor extends App with LazyLogging{
     (for(instance <- instances.par) yield {
       logger.debug(s"Reading ${instance.id}")
       val docs = SupportDocs.localDocs(instance)
-      val env = new WikiHopEnvironment(instance.query.split(" ").last, instance.answer.get, Some(docs))
+      val env = new WikiHopEnvironment(instance.id, instance.query.split(" ").last, instance.answer.get, Some(docs))
       env.readDocumentUniverse()
       env.entities.flatten
     }).seq.flatten.toSet

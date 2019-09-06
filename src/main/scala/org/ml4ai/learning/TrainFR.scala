@@ -13,6 +13,7 @@ import org.sarsamora.actions.Action
 import sun.reflect.generics.reflectiveObjects.NotImplementedException
 import org.ml4ai.utils.using
 
+import scala.collection.mutable.ListBuffer
 import scala.io.Source
 import scala.util.Random
 
@@ -88,6 +89,7 @@ object TrainFR extends App with LazyLogging{
 
   val policy = new EpGreedyPolicy(Decays.exponentialDecay(WHConfig.Training.Epsilon.upperBound, WHConfig.Training.Epsilon.lowerBound, numEpisodes*10, 0).iterator, network)
   val memory = new TransitionMemory[Transition](maxSize = WHConfig.Training.transitionMemorySize)
+  val stats = new ListBuffer[EpisodeStats]()
 
   val smallInstances = selectSmall(instances)
   val streamIterator = Stream.continually(smallInstances.toStream).flatten.iterator
@@ -95,8 +97,9 @@ object TrainFR extends App with LazyLogging{
   val trainingObserver: AgentObserver = new AgentObserver {
 
     var state:Option[WikiHopState] = None
+    var actionLog:ListBuffer[Action] = new ListBuffer[Action]()
 
-    override def startedEpisode(env: WikiHopEnvironment): Unit = {}
+    override def startedEpisode(env: WikiHopEnvironment): Unit = ()
 
     override def beforeTakingAction(action: Action, env: WikiHopEnvironment): Unit = {
       // Save the state observation before taking the action
@@ -112,9 +115,17 @@ object TrainFR extends App with LazyLogging{
       val transition = Transition(state.get, action, reward, newState)
       memory remember transition
       state = None
+      actionLog += action
     }
 
-    override def endedEpisode(env: WikiHopEnvironment): Unit = ()
+    override def endedEpisode(env: WikiHopEnvironment): Unit = {
+      val id = env.id
+      val numIterations = env.iterations
+      val papersRead = env.consultedPapers.size
+
+      stats += EpisodeStats(id, numIterations, papersRead, actionLog.toList)
+      actionLog.clear()
+    }
 
     override def registerError(throwable: Throwable): Unit = {
       logger.error(throwable.getMessage)
