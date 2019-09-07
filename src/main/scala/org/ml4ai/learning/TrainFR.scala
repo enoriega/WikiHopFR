@@ -1,6 +1,10 @@
 package org.ml4ai.learning
 
+import java.io.File
+import java.nio.charset.Charset
+
 import com.typesafe.scalalogging.LazyLogging
+import org.apache.commons.io.FileUtils
 import org.apache.http.impl.client.{CloseableHttpClient, HttpClients}
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
@@ -17,6 +21,7 @@ import org.ml4ai.utils.prettyPrintMap
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
 import scala.util.Random
+import collection.JavaConverters._
 
 object TrainFR extends App with LazyLogging{
 
@@ -124,7 +129,14 @@ object TrainFR extends App with LazyLogging{
       val numIterations = env.iterations
       val papersRead = env.consultedPapers.size
 
-      stats += EpisodeStats(id, numIterations, papersRead, actionLog.toList)
+      val success =
+        if(env.outcome.nonEmpty)
+          true
+        else
+          false
+
+
+      stats += EpisodeStats(id, numIterations, papersRead, success, actionLog.toList)
       actionLog.clear()
     }
 
@@ -133,7 +145,11 @@ object TrainFR extends App with LazyLogging{
     }
   }
 
+  // Load file names
   val checkpointName = WHConfig.Training.modelName
+  val statsDump = new File(WHConfig.Training.statsDump)
+  // Trim the file to start from scratch
+  FileUtils.write(statsDump, "", Charset.defaultCharset)
   var successes = 0
 
   def computeStats(stats: Seq[EpisodeStats]):(Map[Int, Int], Map[Int, Int]) = {
@@ -141,7 +157,7 @@ object TrainFR extends App with LazyLogging{
       (stats map {
         s =>
           (s.iterations, s.papersRead)
-      }).toSeq.unzip
+      }).unzip
 
     val iterationsDist =
       iterations.groupBy(identity).mapValues(_.size)
@@ -169,6 +185,7 @@ object TrainFR extends App with LazyLogging{
         val (iterationDist, documentDist) = computeStats(stats)
         logger.info(s"Iterations:\n${prettyPrintMap(iterationDist)}")
         logger.info(s"Papers read:\n${prettyPrintMap(documentDist)}")
+        FileUtils.writeLines(statsDump, stats.map(_.toString).asJava, true)
         stats.clear()
         updateParameters(network)
         logger.info(s"Saving checkpoint as $checkpointName")

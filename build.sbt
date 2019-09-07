@@ -32,6 +32,7 @@ lazy val root = (project in file(".")).
       "org.scala-graph" %% "graph-dot" % "1.12.1",
       "org.clulab" %% "sarsamora" % "0.2.0-SNAPSHOT",
       "org.apache.httpcomponents" % "httpclient" % "4.5.9",
+      "commons-io" %  "commons-io"  % "2.6",
       scalaTest % Test
     ),
   )

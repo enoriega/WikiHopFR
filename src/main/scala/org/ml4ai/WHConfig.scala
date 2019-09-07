@@ -85,6 +85,8 @@ object WHConfig {
       val upperBound:Double = g.getDouble("upperBound")
       val lowerBound:Double = g.getDouble("lowerBound")
     }
+
+    val statsDump:String = f.getString("statsDump")
   }
 
   object HttpClient {

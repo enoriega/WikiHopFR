@@ -230,17 +230,28 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
       }
   }
 
-  def outcome:Iterable[Seq[VerboseRelation]] = knowledgeGraph match {
-    case Some(kg) =>
-      Try(kg.findPath(start, end)) match {
-        case Success(v) => v
-        case Failure(e) =>
-          logger.error(s"$e - ${e.getMessage}")
-          Seq.empty
-      }
-    case None =>
-      Seq.empty
-  }
+  private var result:Option[Iterable[Seq[VerboseRelation]]] = None
+  def outcome:Iterable[Seq[VerboseRelation]] =
+
+    result match {
+      case Some(v) => v
+      case None =>
+        knowledgeGraph match {
+          case Some(kg) =>
+            Try(kg.findPath(start, end)) match {
+              case Success(v) =>
+                result = Some(v)
+                v
+              case Failure(e) =>
+                logger.error(s"$e - ${e.getMessage}")
+                Seq.empty
+            }
+          case None =>
+            Seq.empty
+        }
+    }
+
+
 
   def iterations:Int = iterationNum
   def consultedPapers:Set[String] = papersRead.toSet

@@ -4,7 +4,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.clulab.utils.Serializer
 import org.ml4ai.agents.baseline.{CascadeAgent, RandomActionAgent}
 import org.ml4ai.agents.{BaseAgent, StatsObserver}
-import org.ml4ai.utils.BenchmarkStats.prettyPrintMap
+import org.ml4ai.utils.prettyPrintMap
 import org.ml4ai.utils.{BenchmarkStats, StatsDatum, WikiHopParser, rng}
 import org.ml4ai.{WHConfig, WikiHopInstance}
 
