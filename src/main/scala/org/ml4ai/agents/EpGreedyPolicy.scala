@@ -16,8 +16,11 @@ class EpGreedyPolicy(decay:Iterator[Double], network:DQN)(implicit rng:Random) e
 
   private implicit val httpClient: CloseableHttpClient = HttpClients.createDefault
 
+  var currentEpsilon:Option[Double] = None
+
   override def selectAction(state: WikiHopState): Action = {
     val epsilon = decay.next()
+    currentEpsilon = Some(epsilon)
 
     if(rng.nextFloat() <= epsilon)
       RandomAction

@@ -103,7 +103,7 @@ object TrainFR extends App with LazyLogging{
   val trainingObserver: AgentObserver = new AgentObserver {
 
     var state:Option[WikiHopState] = None
-    var actionLog:ListBuffer[Action] = new ListBuffer[Action]()
+    var actionLog:ListBuffer[(Double, Action)] = new ListBuffer[(Double, Action)]()
 
     override def startedEpisode(env: WikiHopEnvironment): Unit = ()
 
@@ -118,10 +118,11 @@ object TrainFR extends App with LazyLogging{
     override def concreteActionTaken(action: Action, reward: Float, numDocsAdded: Int, env: WikiHopEnvironment): Unit = {
       assert(state.isDefined, "The state should be defined at this point")
       val newState = env.observeState
+      val epsilon = policy.currentEpsilon.get
       val transition = Transition(state.get, action, reward, newState)
       memory remember transition
       state = None
-      actionLog += action
+      actionLog += Tuple2(epsilon, action)
     }
 
     override def endedEpisode(env: WikiHopEnvironment): Unit = {
@@ -135,8 +136,9 @@ object TrainFR extends App with LazyLogging{
         else
           false
 
+      val (epsilons, actions) = actionLog.unzip
 
-      stats += EpisodeStats(id, numIterations, papersRead, success, actionLog.toList)
+      stats += EpisodeStats(id, numIterations, papersRead, success, epsilons, actions)
       actionLog.clear()
     }
 
@@ -180,6 +182,8 @@ object TrainFR extends App with LazyLogging{
 
       if (ep % targetUpdate == 0) {
         val successRate = successes / targetUpdate.toFloat
+        logger.info(s"Current episode: $ep out of $numEpisodes")
+        logger.info(s"Current ε = ${policy.currentEpsilon.get}")
         logger.info(s"Success rate of $successRate for the last $targetUpdate episodes")
         successes = 0
         val (iterationDist, documentDist) = computeStats(stats)
