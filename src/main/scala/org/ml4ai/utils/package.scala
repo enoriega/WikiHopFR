@@ -74,4 +74,6 @@ package object utils {
     buf.toString()
   }
 
+  def sigmoid(x:Double):Double = 1.0 / (1.0 + Math.exp(-x))
+
 }

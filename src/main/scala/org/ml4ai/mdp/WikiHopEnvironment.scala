@@ -4,7 +4,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.ml4ai.{WHConfig, WikiHopInstance}
 import org.ml4ai.inference._
 import org.ml4ai.ir.LuceneHelper
-import org.ml4ai.utils.{AnnotationsLoader, HttpUtils, WikiHopParser, buildRandom, filterUselessLemmas}
+import org.ml4ai.utils.{AnnotationsLoader, HttpUtils, WikiHopParser, buildRandom, sigmoid}
 import org.sarsamora.actions.Action
 import org.sarsamora.environment.Environment
 import org.sarsamora.states.State
@@ -101,7 +101,7 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
     * @return
     */
   private def rewardSignal(action: Action, newState:KnowledgeGraph, fetchedPapers:Set[String]):Double = {
-    // TODO make the reward function more nuanced
+
     val newPapers:Int = (fetchedPapers diff papersRead).size
     val newRelations:Int =
       (newState.edges diff
@@ -111,18 +111,23 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
         })
       ).size
 
+    val successReward = WHConfig.Environment.successReward
+    val failureReward = WHConfig.Environment.failureReward
     val livingReward = WHConfig.Environment.livingReward
+    val sigmoidFactor = successReward*0.5 // TODO Parameterize the ratio
 
     val informationRatio = if(newPapers > 0) newRelations / newPapers else 0
 
-    val standardReward = informationRatio - livingReward
+    val scaledInformationRatio = sigmoid(informationRatio-sigmoidFactor) * sigmoidFactor
+
+    val standardReward = scaledInformationRatio - livingReward
 
     val outcomeReward: Double =
       if(finishedEpisode) {
         if(outcome.nonEmpty)
-          WHConfig.Environment.successReward
+          successReward
         else
-          WHConfig.Environment.failureReward
+          failureReward
       }
       else
         0
