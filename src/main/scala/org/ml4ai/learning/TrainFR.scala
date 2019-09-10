@@ -64,8 +64,22 @@ object TrainFR extends App with LazyLogging{
                 case _ => throw new NotImplementedException
               }
 
+              val indexA = state.candidateEntities.get.indexOf(entityA)
+              val indexB = state.candidateEntities.get.indexOf(entityB)
+
+              // TODO verify why is an entity not present in the list
+              val extendedFeatures =
+                features ++ Map("log_count_a" -> (if(indexA >= 0) state.entityUsage(indexA) else 0.0),
+                    "log_count_b" -> (if(indexB >= 0) state.entityUsage(indexB) else 0.0),
+                    "intro_a" -> (if(indexA >= 0) state.iterationsOfIntroduction(indexA) else 0.0),
+                    "intro_b" -> (if(indexB >= 0) state.iterationsOfIntroduction(indexB) else 0.0),
+                    "rank_a" -> (if(indexA >= 0) state.ranks(indexA) else 0.0),
+                    "rank_b" -> (if(indexB >= 0) state.ranks(indexB) else 0.0))
+
               ("state" ->
-                ("features" -> features) ~ ("A" -> entityA) ~ ("B" -> entityB)) ~
+                ("features" -> extendedFeatures) ~
+
+                  ("A" -> entityA) ~ ("B" -> entityB)) ~
                 ("action" ->
                   (action match {
                     case _: Exploitation => "exploitation"
@@ -75,9 +89,9 @@ object TrainFR extends App with LazyLogging{
                 ("new_state" ->
                   ("features" -> nextState.toFeatures) ~
                   ("candidates" -> nextState.candidateEntities.get) ~
-                  ("iterationsOfIntroduction" -> state.iterationsOfIntroduction) ~
-                  ("ranks" -> state.ranks) ~
-                  ("entityUsage" -> state.ranks))
+                  ("iterationsOfIntroduction" -> nextState.iterationsOfIntroduction) ~
+                  ("ranks" -> nextState.ranks) ~
+                  ("entityUsage" -> nextState.ranks))
           }
         }
       }
