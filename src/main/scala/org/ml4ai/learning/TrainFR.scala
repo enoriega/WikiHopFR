@@ -73,7 +73,11 @@ object TrainFR extends App with LazyLogging{
                   })) ~
                 ("reward" -> reward) ~
                 ("new_state" ->
-                  ("features" -> nextState.toFeatures) ~ ("candidates" -> nextState.candidateEntities.get))
+                  ("features" -> nextState.toFeatures) ~
+                  ("candidates" -> nextState.candidateEntities.get) ~
+                  ("iterationsOfIntroduction" -> state.iterationsOfIntroduction) ~
+                  ("ranks" -> state.ranks) ~
+                  ("entityUsage" -> state.ranks))
           }
         }
       }

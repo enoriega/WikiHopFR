@@ -8,7 +8,6 @@ import org.ml4ai.utils.{AnnotationsLoader, HttpUtils, WikiHopParser, buildRandom
 import org.sarsamora.actions.Action
 import org.sarsamora.environment.Environment
 import org.sarsamora.states.State
-import org.json4s.JsonDSL._
 import org.json4s.native.JsonMethods._
 
 import scala.collection.mutable
@@ -39,6 +38,8 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
   private var iterationNum:Int = 0
   private val exploredEntities = new mutable.HashSet[Set[String]]
   private val exploitedEntities = new mutable.HashSet[Set[String]]
+  private val entityIntroductionJournal = new mutable.HashMap[Set[String], Int].withDefaultValue(0)
+  private val entityUsageJournal = new mutable.HashMap[Set[String], Int].withDefaultValue(0)
   private val papersRead = new mutable.HashSet[String]
   private val rng = buildRandom()
   private val startTokens = start.split(" ").toSet
@@ -168,6 +169,11 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
           throw new UnsupportedOperationException("Invalid action here")
       }
 
+    // Increase the count of times the entities have been subject of an action
+    entityUsageJournal(chosenEntities._1) += 1
+    if(chosenEntities._1 != chosenEntities._2)
+      entityUsageJournal(chosenEntities._2) += 1
+
     // Store them
     entitySelectionList = chosenEntities::entitySelectionList
 
@@ -184,6 +190,11 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
     knowledgeGraph = Some(kg)
     papersRead ++= fetchedDocs
 
+    // Update the journal with the new entities
+    for(entity <- kg.entities){
+      entityIntroductionJournal.getOrElseUpdate(entity, iterationNum)
+    }
+
     reward
   }
 
@@ -195,6 +206,9 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
     possibleActions.tail(ix)
   }
 
+  // Computes safely how many times an entity has been subject of an action
+  private def timesUsed(entity:Set[String]):Int = entityUsageJournal.getOrElse(entity, 0)
+
 
   def observeState:WikiHopState = {
     val (numNodes, numEdges) = knowledgeGraph match {
@@ -204,8 +218,42 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
         (0, 0)
     }
 
-    // TODO Complete this definition with the rest of the features
-    WikiHopState(iterationNum, numNodes, numEdges, startTokens, endTokens, Some(topEntities))
+    val tEntities = topEntities
+    val iterationsOfIntroduction = tEntities map entityIntroductionJournal
+    val ranks = tEntities map {
+      entity =>
+        knowledgeGraph match {
+          case Some(kg) => kg.degrees(entity)
+          case None => 0
+        }
+    }
+    val entityUsage = tEntities map timesUsed
+
+    val entityPairs =
+      for{
+        ea <- tEntities
+        eb <- tEntities
+        if ea != eb
+      } yield Set(ea, eb)
+
+    // TODO clean this up
+    val pairwiseComponents =
+      entityPairs.toSet.map{
+        pair:Set[Set[String]] =>
+          val (ea, eb) = (pair.head, pair.tail.head)
+          val key = (ea, eb)
+          val value =
+            knowledgeGraph match {
+              case Some(kg) =>
+                kg.shareConnectedComponent(ea, eb)
+              case None => false
+            }
+
+          key -> value
+      }.toMap
+
+    WikiHopState(iterationNum, numNodes, numEdges, startTokens, endTokens,
+      Some(tEntities), iterationsOfIntroduction, ranks, entityUsage, pairwiseComponents)
   }
 
   override def finishedEpisode: Boolean = {
@@ -273,7 +321,7 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
   }
 
   private def distance(pairs:Seq[(Set[String], Set[String])]):Seq[Float] = {
-
+    import org.json4s.JsonDSL._
     import WikiHopEnvironment.httpClient
 
     val payload =

@@ -29,7 +29,13 @@ class EpGreedyPolicy(decay:Iterator[Double], network:DQN)(implicit rng:Random) e
       val payload =
         compact{
           render{
-            Seq(("features" -> state.toFeatures) ~ ("candidates" -> state.candidateEntities.get))
+            Seq(("features" -> state.toFeatures) ~
+              ("candidates" -> state.candidateEntities.get) ~
+              ("iterationsOfIntroduction" -> state.iterationsOfIntroduction) ~
+              ("ranks" -> state.ranks) ~
+              ("entityUsage" -> state.ranks)
+//              ("pairwiseComponents" -> state.pairwiseComponents)
+            )
           }
         }
 

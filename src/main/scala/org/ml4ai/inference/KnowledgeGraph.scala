@@ -18,24 +18,6 @@ case class KBLabel(relation:Relation)
 
 abstract class KnowledgeGraph(documents:Iterable[(String,Document)]) extends DotEnabled with LazyLogging{
 
-
-//  protected lazy val groupedEntityHashes: Map[Set[String], Int] = {
-//    val allLemmas = entityLemmaHashes.keySet
-//
-//    (for{
-//      current <- allLemmas
-//      candidate <- allLemmas
-//      if all(current map candidate.contains)
-//    } yield {
-//      (current, candidate)
-//    }).groupBy(_._1)
-//      .mapValues{
-//        elems =>
-//          val representative = elems.map(_._2).toSeq.maxBy(_.size)
-//          entityLemmaHashes(representative)
-//      } ++ Map(Set.empty[String] -> 0)
-//  }
-
   protected lazy val groupedEntityHashes: Map[Set[String], Int] = {
 
     def equivalent(a:Set[String], b:Set[String]) = {
@@ -193,6 +175,27 @@ abstract class KnowledgeGraph(documents:Iterable[(String,Document)]) extends Dot
         }
       }
     )
+
+  def shareConnectedComponent(a:Set[String], b:Set[String]):Boolean = {
+    val sh = groupedEntityHashes.getOrElse(a, -1)
+    val dh = groupedEntityHashes.getOrElse(b, -1)
+
+    if (sh == -1)
+      logger.error(s"$a non-hashable")
+    if (dh == -1)
+      logger.error(s"$b non-hashable")
+
+    if(sh == dh)
+      throw new SameGroundedEndpointsException(a.mkString(" "), b.mkString(" "))
+
+    val s = graph get sh
+    val d = graph get dh
+
+    s pathTo d match {
+      case Some(_) =>true
+      case None => false
+    }
+  }
 
   protected def relationToVerboseRelation(relation:Relation):VerboseRelation =
     VerboseRelation(
