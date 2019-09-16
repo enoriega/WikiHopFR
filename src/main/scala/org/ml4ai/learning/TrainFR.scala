@@ -111,7 +111,7 @@ object TrainFR extends App with LazyLogging{
   val network = new DQN()
   network.reset()
 
-  val policy = new EpGreedyPolicy(Decays.exponentialDecay(WHConfig.Training.Epsilon.upperBound, WHConfig.Training.Epsilon.lowerBound, numEpisodes*10, 0).iterator, network)
+  val policy = new EpGreedyPolicy(Decays.exponentialDecay(WHConfig.Training.Epsilon.upperBound, WHConfig.Training.Epsilon.lowerBound, numEpisodes, 0).iterator, network)
   val memory = new TransitionMemory[Transition](maxSize = WHConfig.Training.transitionMemorySize)
   val stats = new ListBuffer[EpisodeStats]()
 
