@@ -9,7 +9,7 @@ object SupportDocs {
 
   def randomDocs(instance:WikiHopInstance):Set[String] = {
 
-    val randomDocs = rng.shuffle(WikiHopParser.trainingInstances).take(100).flatMap(_.supportDocs.map(md5Hash)).toSet.take (200)
+    val randomDocs = rng.shuffle(WikiHopParser.trainingInstances).take(100).flatMap(_.supportDocs.map(md5Hash)).toSet.take (100)
     localDocs(instance) union randomDocs
   }
 
@@ -22,6 +22,6 @@ object SupportDocs {
     }
 
     val relatedDocs = LuceneHelper.getLexicallySimilarDocuments(source.split(" ").toSet, destination.split(" ").toSet)
-    localDocs(instance) union relatedDocs.take(200).toSet
+    localDocs(instance) union relatedDocs.take(100).toSet
   }
 }
