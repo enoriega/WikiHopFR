@@ -169,25 +169,33 @@ object TrainFR extends App with LazyLogging{
     // Pre-sample the epsilon values
     val epsilonVals = epsilonDecay take WHConfig.Environment.maxIterations toSeq
     // Let the cores do their work on the first slice of instances
-    val futures =
-      instancesBatch map {
-        instance =>
-          // Dispatch the agent asynchronously
-          val f =
-            Future {
-              // Set up the body of the future
-              val policy = new EpGreedyPolicy(epsilonVals.iterator, network)
-              val agent = new PolicyAgent(policy)
-              val observer: AgentObserver = new TrainingAgentObserver(epsilonVals.iterator)
-              val outcome = agent.runEpisode(instance, Some(observer))
-              (outcome, observer)
-            }
-          // Attach a non-blocking timeout to the future
-          FutureUtils.futureWithTimeout(f, 1.minute)
-      } toSeq // This call toSeq is necessary to not consume the iterable after awaiting for the results
+    val slices = instancesBatch.grouped(WHConfig.Training.maxThreads)
 
-    // Block on the futures to collect the results and do back propagation
-    Await.ready(Future.sequence(futures), Duration.Inf)
+    val futures =
+      (for(slice <- slices) yield {
+        val sliceFutures =
+          slice map {
+            instance =>
+              // Dispatch the agent asynchronously
+              val f =
+                Future {
+                  // Set up the body of the future
+                  val policy = new EpGreedyPolicy(epsilonVals.iterator, network)
+                  val agent = new PolicyAgent(policy)
+                  val observer: AgentObserver = new TrainingAgentObserver(epsilonVals.iterator)
+                  val outcome = agent.runEpisode(instance, Some(observer))
+                  (outcome, observer)
+                }
+              // Attach a non-blocking timeout to the future
+              FutureUtils.futureWithTimeout(f, 1.minute)
+          } toSeq // This call toSeq is necessary to not consume the iterable after awaiting for the results
+
+        // Block on the futures to collect the results and do back propagation
+        Await.ready(Future.sequence(sliceFutures), Duration.Inf)
+
+        sliceFutures
+      }).flatten.toSeq
+
 
 
     // Collect the results
