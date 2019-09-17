@@ -2,6 +2,7 @@ package org.ml4ai.learning
 
 import java.io.File
 import java.nio.charset.Charset
+import java.util.concurrent.{ExecutorService, Executors}
 
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
@@ -10,18 +11,17 @@ import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 import org.ml4ai.agents.{AgentObserver, EpGreedyPolicy, PolicyAgent}
 import org.ml4ai.mdp._
-import org.ml4ai.utils.{HttpUtils, TransitionMemory, WikiHopParser, rng}
+import org.ml4ai.utils.{FutureUtils, HttpUtils, TransitionMemory, WikiHopParser, lemmatize, prettyPrintMap, rng, using}
 import org.ml4ai.{WHConfig, WikiHopInstance}
 import org.sarsamora.Decays
-import org.sarsamora.actions.Action
 import sun.reflect.generics.reflectiveObjects.NotImplementedException
-import org.ml4ai.utils.using
-import org.ml4ai.utils.prettyPrintMap
 
-import scala.collection.mutable.ListBuffer
+import language.postfixOps
 import scala.io.Source
-import scala.util.Random
+import scala.util.{Failure, Random, Success}
 import collection.JavaConverters._
+import concurrent.{Await, ExecutionContext, Future}
+import concurrent.duration._
 
 object TrainFR extends App with LazyLogging{
 
@@ -33,7 +33,7 @@ object TrainFR extends App with LazyLogging{
         s =>
           s.getLines().toSet
       }
-    instances filter (i => names contains (i.id))
+    instances filter (i => names contains i.id)
   }
 
   /**
@@ -100,78 +100,11 @@ object TrainFR extends App with LazyLogging{
 
   }
 
-
-  // Load the data
-  val instances = WikiHopParser.trainingInstances
-
-  val numEpisodes = WHConfig.Training.episodes
-  val targetUpdate = WHConfig.Training.targetUpdate
-
-
-  val network = new DQN()
-  network.reset()
-
-  val policy = new EpGreedyPolicy(Decays.exponentialDecay(WHConfig.Training.Epsilon.upperBound, WHConfig.Training.Epsilon.lowerBound, numEpisodes, 0).iterator, network)
-  val memory = new TransitionMemory[Transition](maxSize = WHConfig.Training.transitionMemorySize)
-  val stats = new ListBuffer[EpisodeStats]()
-
-  val smallInstances = selectSmall(instances)
-  val streamIterator = Stream.continually(smallInstances.toStream).flatten.iterator
-
-  val trainingObserver: AgentObserver = new AgentObserver {
-
-    var state:Option[WikiHopState] = None
-    var actionLog:ListBuffer[(Double, Action)] = new ListBuffer[(Double, Action)]()
-
-    override def startedEpisode(env: WikiHopEnvironment): Unit = ()
-
-    override def beforeTakingAction(action: Action, env: WikiHopEnvironment): Unit = {
-      // Save the state observation before taking the action
-      state = Some(env.observeState)
-    }
-
-    override def actionTaken(action: Action, reward: Float, numDocsAdded: Int, env: WikiHopEnvironment): Unit = ()
-
-
-    override def concreteActionTaken(action: Action, reward: Float, numDocsAdded: Int, env: WikiHopEnvironment): Unit = {
-      assert(state.isDefined, "The state should be defined at this point")
-      val newState = env.observeState
-      val epsilon = policy.currentEpsilon.get
-      val transition = Transition(state.get, action, reward, newState)
-      memory remember transition
-      state = None
-      actionLog += Tuple2(epsilon, action)
-    }
-
-    override def endedEpisode(env: WikiHopEnvironment): Unit = {
-      val id = env.id
-      val numIterations = env.iterations
-      val papersRead = env.consultedPapers.size
-
-      val success =
-        if(env.outcome.nonEmpty)
-          true
-        else
-          false
-
-      val (epsilons, actions) = actionLog.unzip
-
-      stats += EpisodeStats(id, numIterations, papersRead, success, epsilons, actions)
-      actionLog.clear()
-    }
-
-    override def registerError(throwable: Throwable): Unit = {
-      logger.error(throwable.getMessage)
-    }
-  }
-
-  // Load file names
-  val checkpointName = WHConfig.Training.modelName
-  val statsDump = new File(WHConfig.Training.statsDump)
-  // Trim the file to start from scratch
-  FileUtils.write(statsDump, "", Charset.defaultCharset)
-  var successes = 0
-
+  /**
+    * Aux function to compute some of the stats that get printed to the log
+    * @param stats Sequence of EpisodeStats instances
+    * @return
+    */
   def computeStats(stats: Seq[EpisodeStats]):(Map[Int, Int], Map[Int, Int]) = {
     val (iterations, papersRead) =
       (stats map {
@@ -187,34 +120,107 @@ object TrainFR extends App with LazyLogging{
     (iterationsDist, papersDist)
   }
 
-  for(ep <- 1 to numEpisodes){
-    if(!converged || ep < targetUpdate) {
-      logger.debug(s"Epoch $ep")
-      val agent = new PolicyAgent(policy)
-      val instance = streamIterator.next()
-      val outcome = agent.runEpisode(instance, Some(trainingObserver))
 
-      val successful = outcome.nonEmpty
-      if (successful)
-        successes += 1
+  // Load the data
+  val instances = WikiHopParser.trainingInstances
 
-      if (ep % targetUpdate == 0) {
-        val successRate = successes / targetUpdate.toFloat
-        logger.info(s"Current episode: $ep out of $numEpisodes")
-        logger.info(s"Current ε = ${policy.currentEpsilon.get}")
-        logger.info(s"Success rate of $successRate for the last $targetUpdate episodes")
-        successes = 0
-        val (iterationDist, documentDist) = computeStats(stats)
-        logger.info(s"Iterations:\n${prettyPrintMap(iterationDist)}")
-        logger.info(s"Papers read:\n${prettyPrintMap(documentDist)}")
-        FileUtils.writeLines(statsDump, stats.map(_.toString).asJava, true)
-        stats.clear()
-        updateParameters(network)
-        logger.info(s"Saving checkpoint as $checkpointName")
-        network.save(checkpointName)
-      }
+  val numEpisodes = WHConfig.Training.episodes
+  val targetUpdate = WHConfig.Training.targetUpdate
+
+
+  val network = new DQN()
+  network.reset()
+
+  val epsilonDecay = Decays.exponentialDecay(WHConfig.Training.Epsilon.upperBound, WHConfig.Training.Epsilon.lowerBound, numEpisodes, 0).iterator
+  val memory = new TransitionMemory[Transition](maxSize = WHConfig.Training.transitionMemorySize)
+
+  val smallInstances = selectSmall(instances)
+  val streamIterator = Stream.continually(smallInstances.toStream).flatten.iterator
+
+  // Load file names
+  val checkpointName = WHConfig.Training.modelName
+  val statsDump = new File(WHConfig.Training.statsDump)
+  // Trim the file to start from scratch
+  FileUtils.write(statsDump, "", Charset.defaultCharset)
+
+  // Preload processors
+  lemmatize("Preload processors, please")
+
+  // Operate asynchronously with $targetUpdate futures simultaneously
+  //implicit val executionContext: ExecutionContext = ExecutionContext.Implicits.global
+  implicit val ec: ExecutionContext = new ExecutionContext {
+    val threadPool: ExecutorService = Executors.newFixedThreadPool(WHConfig.Training.maxThreads)
+
+    def execute(runnable: Runnable) {
+      threadPool.submit(runnable)
+    }
+
+    def reportFailure(t: Throwable): Unit = {
+      logger.error(s"${t.getClass}\t${t.getMessage}")
     }
   }
+
+
+  // Iterate through the requested number of epochs with a stride value of targetUpdate
+  for(ep <- 1 to numEpisodes by targetUpdate) {
+    logger.debug(s"Epoch $ep")
+    // Take a slice of the instances
+    val instancesBatch = streamIterator take targetUpdate
+    // Pre-sample the epsilon values
+    val epsilonVals = epsilonDecay take WHConfig.Environment.maxIterations toSeq
+    // Let the cores do their work on the first slice of instances
+    val futures =
+      instancesBatch map {
+        instance =>
+          // Dispatch the agent asynchronously
+          val f =
+            Future {
+              // Set up the body of the future
+              val policy = new EpGreedyPolicy(epsilonVals.iterator, network)
+              val agent = new PolicyAgent(policy)
+              val observer: AgentObserver = new TrainingAgentObserver(epsilonVals.iterator)
+              val outcome = agent.runEpisode(instance, Some(observer))
+              (outcome, observer)
+            }
+          // Attach a non-blocking timeout to the future
+          FutureUtils.futureWithTimeout(f, 1.minute)
+      } toSeq // This call toSeq is necessary to not consume the iterable after awaiting for the results
+
+    // Block on the futures to collect the results and do back propagation
+    Await.ready(Future.sequence(futures), Duration.Inf)
+
+
+    // Collect the results
+    val (outcomes, observers) =
+      (futures map (_.value) collect {
+        case Some(Success((outcome, observer))) => (outcome, observer)
+      }).unzip
+
+    // Aggregate the results
+    val successes = outcomes count (_.nonEmpty)
+    // Aggregate observers' data
+    val (partialMemories, partialStats) = observers map {
+      case o:TrainingAgentObserver => (o.memory, o.stats)
+    } unzip
+    // Aggregate the stats
+    val stats = partialStats.flatten
+    // Expand the memory with all the individual memories
+    memory remember partialMemories.flatten
+
+    // Do a back propagation step and send info to the log
+    val successRate = successes / targetUpdate.toFloat
+    logger.info(s"Current episode: $ep out of $numEpisodes")
+    logger.info(s"Current ε = ${epsilonVals.last}")
+    logger.info(s"Success rate of $successRate for the last $targetUpdate episodes")
+    val (iterationDist, documentDist) = computeStats(stats)
+    logger.info(s"Iterations:\n${prettyPrintMap(iterationDist)}")
+    logger.info(s"Papers read:\n${prettyPrintMap(documentDist)}")
+    FileUtils.writeLines(statsDump, stats.map(_.toString).asJava, true)
+    updateParameters(network)
+    logger.info(s"Saving checkpoint as $checkpointName")
+    network.save(checkpointName)
+  }
+
 
   // Do dataset split
   // Define the batch size

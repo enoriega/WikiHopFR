@@ -52,6 +52,7 @@ object WHConfig {
     val livingReward: Double = f.getDouble("livingReward")
     val cacheAnnotations: Boolean = f.getBoolean("cacheAnnotations")
     val topEntitiesNum: Int = f.getInt("topEntitiesNum")
+    val maxIterations: Int = f.getInt("maxIterations")
   }
 
   object Benchmark {
@@ -87,6 +88,7 @@ object WHConfig {
     }
 
     val statsDump:String = f.getString("statsDump")
+    val maxThreads:Int = f.getInt("maxThreads")
   }
 
   object HttpClient {

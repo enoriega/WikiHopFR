@@ -31,7 +31,7 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
 
 
   // Control values
-  val maxIterations = 10
+  val maxIterations: Int = WHConfig.Environment.maxIterations
 
   // State variables
   private var knowledgeGraph:Option[KnowledgeGraph] = None
