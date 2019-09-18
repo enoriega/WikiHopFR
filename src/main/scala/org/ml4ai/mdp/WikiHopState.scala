@@ -6,9 +6,9 @@ import org.sarsamora.states.State
 case class WikiHopState(iterationNum:Int,
                         numNodes:Int,
                         numEdges:Int,
-                        startEntity:Set[String],
-                        endEntity:Set[String],
-                        candidateEntities:Option[Seq[Set[String]]] // Store the candidate entities in the state for future usage
+                        startEntity:Seq[String],
+                        endEntity:Seq[String],
+                        candidateEntities:Option[Seq[Seq[String]]] // Store the candidate entities in the state for future usage
                        ) extends State {
   override def toFeatures: Map[String, Double] =
     Map(

@@ -19,7 +19,7 @@ class AnnotationsLoader(path:String, cache:Boolean = false){
 
   private def loadAnnotations():Map[String, String] = {
 
-    using(Source.fromFile(path)) {
+    using(Source.fromFile(path, "UTF-8")) {
       src =>
 
         val buffer = new ListBuffer[String]

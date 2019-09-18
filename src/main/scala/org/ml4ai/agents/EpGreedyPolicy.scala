@@ -32,19 +32,19 @@ class EpGreedyPolicy(decay:Iterator[Double], network:DQN)(implicit rng:Random) e
 
     ComputationGraph.renew()
 
-    val candidateEntities:Seq[Set[String]] = state.candidateEntities.get
+    val candidateEntities:Seq[Seq[String]] = state.candidateEntities.get
 
     if(rng.nextFloat() <= epsilon)
       RandomAction
     else{
 
       // Get the top action values for each of the candidate entities
-      val actionValues =
+      val actionValues: Seq[(Int, Float, Seq[String], Seq[String])] =
         for{
           entityA <- candidateEntities
           entityB <- candidateEntities
         } yield {
-          val actionVals = network((state, entityA, entityB)).value()
+          val actionVals = network.evaluate((state, entityA, entityB))
           val (actionIx, actionValue) = (argMax(actionVals).head, max(actionVals).head)
           (actionIx, actionValue, entityA, entityB)
         }

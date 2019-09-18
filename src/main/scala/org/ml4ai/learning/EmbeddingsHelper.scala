@@ -49,9 +49,10 @@ class EmbeddingsHelper(pc:ParameterCollection) extends LazyLogging {
   private val pretrainedEmbeddings = pc.addLookupParameters(originalEmbeddings.matrix.size, Dim(embeddingsDim), init = ParameterInit.fromVector(ev))
   private val missingEmbeddings = pc.addLookupParameters(missingIndex.size, Dim(embeddingsDim))
 
-  def lookup(entity:Set[String]):Iterable[Expression] = entity map {
-    term =>
+  def lookup(entity:Seq[String]):Seq[Expression] = {
+    val result = entity map { term =>
       val sanitizedTerm = Word2Vec.sanitizeWord(term)
+
       if(pretrainedIndex contains sanitizedTerm) {
         // Fetch from the pretrained embeddings
         Expression.lookup(pretrainedEmbeddings, pretrainedIndex(sanitizedTerm))
@@ -60,5 +61,8 @@ class EmbeddingsHelper(pc:ParameterCollection) extends LazyLogging {
 //        Expression.lookup(missingEmbeddings, missingIndex(Word2Vec.sanitizeWord(term)))
         Expression.lookup(missingEmbeddings, missingIndex("OOV"))
       }
+    }
+
+    result
   }
 }

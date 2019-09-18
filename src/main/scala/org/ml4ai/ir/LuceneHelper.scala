@@ -39,8 +39,8 @@ object LuceneHelper extends LazyLogging {
     * @param searcher Instance of lucene searcher (the index)
     * @return
     */
-  def getLexicallySimilarDocuments(entityA:Set[String], entityB:Set[String], searcher:IndexSearcher = defaultSearcher):Seq[String] = {
-    val allTerms = entityA union entityB
+  def getLexicallySimilarDocuments(entityA:Seq[String], entityB:Seq[String], searcher:IndexSearcher = defaultSearcher):Seq[String] = {
+    val allTerms = (entityA union entityB).distinct.sorted
     val query = entityTermsDisjunction(allTerms)
 
     // Execute the query
@@ -124,7 +124,7 @@ object LuceneHelper extends LazyLogging {
   }
 
 
-  private def entityTermsBooleanClause(entityTerms:Set[String], clause:BooleanClause.Occur):BooleanQuery = {
+  private def entityTermsBooleanClause(entityTerms:Seq[String], clause:BooleanClause.Occur):BooleanQuery = {
     val analyzedTerms = analyzeTerms(entityTerms)
     val termQueries = analyzedTerms map (t => new TermQuery(new Term("contents", t)))
 
@@ -139,26 +139,28 @@ object LuceneHelper extends LazyLogging {
   }
 
 
-  private def entityTermsConjunction(entityTerms:Set[String]):BooleanQuery =
+  private def entityTermsConjunction(entityTerms:Seq[String]):BooleanQuery =
     entityTermsBooleanClause(entityTerms, BooleanClause.Occur.MUST)
 
-  private def entityTermsDisjunction(entityTerms:Set[String]):BooleanQuery =
+  private def entityTermsDisjunction(entityTerms:Seq[String]):BooleanQuery =
     entityTermsBooleanClause(entityTerms, BooleanClause.Occur.SHOULD)
 
 
   // Taken from https://lucene.apache.org/core/7_2_1/core/org/apache/lucene/analysis/package-summary.html
-  private def analyzeTerms(entityTerms:Set[String]):Set[String] = entityTerms flatMap {
-    term =>
+  private def analyzeTerms(entityTerms:Seq[String]):Seq[String] = {
+    val tokens = new mutable.HashSet[String]
+
+    entityTerms foreach { term: String =>
       val tokenStream = analyzer.tokenStream("contents", term)
       val termAtt: CharTermAttribute = tokenStream.addAttribute(classOf[CharTermAttribute])
-      val tokens = new mutable.HashSet[String]
       tokenStream.reset()
       while(tokenStream.incrementToken()){
         tokens += termAtt.toString
       }
       tokenStream.end()
       tokenStream.close()
-      tokens.toSet
+    }
+    tokens.toSeq.sorted
   }
 
   /**

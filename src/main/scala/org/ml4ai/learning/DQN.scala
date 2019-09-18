@@ -1,9 +1,8 @@
 package org.ml4ai.learning
 
-import edu.cmu.dynet.{ComputationGraph, Dim, Expression, FloatVector, ParameterCollection, Tensor}
+import edu.cmu.dynet.{ComputationGraph, Dim, Expression, ExpressionVector, FloatVector, ParameterCollection, Tensor}
 import org.ml4ai.mdp.{Exploitation, Exploration, ExplorationDouble, WikiHopState}
 import org.sarsamora.actions.Action
-import org.sarsamora.states.State
 
 class DQN(params:ParameterCollection, embeddingsHelper: EmbeddingsHelper) {
 
@@ -18,28 +17,31 @@ class DQN(params:ParameterCollection, embeddingsHelper: EmbeddingsHelper) {
 
   ComputationGraph.renew()
 
-  def apply(input:(WikiHopState, Set[String], Set[String])): Expression = this(Seq(input))
+  def evaluate(input: (WikiHopState, Seq[String], Seq[String])): Tensor = evaluate(Seq(input))
 
-  def apply(input:Iterable[(WikiHopState, Set[String], Set[String])]):Expression = {
+  def evaluate(input: Seq[(WikiHopState, Seq[String], Seq[String])]): Tensor = {
+    // It appears that this cannot be placed inside the loop below.
+    val features = input.map { case (state, _, _) => vectorizeState(state) }
 
-    val inputVectors = input.toSeq map {
-      case (state, entityA, entityB) =>
-        val features = vectorizeState(state)
-        val featureVector = Expression.input(Dim(features.size), features)
-        val embA = embeddingsHelper.lookup(entityA)
-        val embB = embeddingsHelper.lookup(entityB)
+    val inputVectors = input.zip(features).map { case ((state, entityA, entityB), features) =>
+      // val features = vectorizeState(state)
+      val featureVector = Expression.input(Dim(features.size), features)
+      val embA = embeddingsHelper.lookup(entityA)
+      val embB = embeddingsHelper.lookup(entityB)
 
-        Expression.concatenate(featureVector, aggregateEmbeddings(embA), aggregateEmbeddings(embB))
+      Expression.concatenate(featureVector, aggregateEmbeddings(embA), aggregateEmbeddings(embB))
     }
 
-    val inputMatrix = Expression.concatenateCols(inputVectors:_*)
-
+    val expressionVector = new ExpressionVector(inputVectors)
+    val inputMatrix = Expression.concatenateCols(expressionVector)
     val W = Expression.parameter(pW)
     val b = Expression.parameter(pb)
     val X = Expression.parameter(pX)
     val c = Expression.parameter(pc)
+    val expr = X * Expression.tanh(W * inputMatrix + b) + c
+    val value = expr.value()
 
-    X * Expression.tanh(W*inputMatrix + b) + c
+    value
   }
 
   /**
@@ -49,24 +51,26 @@ class DQN(params:ParameterCollection, embeddingsHelper: EmbeddingsHelper) {
     */
   def vectorizeState(state:WikiHopState):FloatVector = {
     val features = Seq(
-      state.iterationNum,
-      state.numNodes,
-      state.numEdges
+      state.iterationNum.toFloat,
+      state.numNodes.toFloat,
+      state.numEdges.toFloat
     )
 
-    FloatVector.Seq2FloatVector(features map (_.toFloat))
+    new FloatVector(features)
   }
 
   /**
     * Aggregates entity embeddings by certain criteria to yield a unique entity embedding
     */
-  private def aggregateEmbeddings(embs:Iterable[Expression]) = {
+  private def aggregateEmbeddings(embs:Seq[Expression]) = {
     // TODO: Add more nuance here
-    Expression.average(embs.toSeq)
+    Expression.average(embs)
   }
 }
 
 object DQN {
+  import scala.language.implicitConversions
+
   implicit def actionIndex(action:Action):Int = action match {
     case _:Exploration => 0
     case _:ExplorationDouble => 1

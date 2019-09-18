@@ -46,8 +46,8 @@ class TestLuceneUtils extends FlatSpec with Matchers{
   }
 
   it should "be case-insensitive" in {
-    val termUpperCase = Set("Enrique", "Noriega")
-    val termLowerCase = Set("enrique", "noriega")
+    val termUpperCase = Seq("Enrique", "Noriega")
+    val termLowerCase = Seq("enrique", "noriega")
 
     val actionUpperCase = Exploration(termUpperCase)
     val actionLowerCase = Exploration(termLowerCase)
@@ -60,7 +60,7 @@ class TestLuceneUtils extends FlatSpec with Matchers{
   }
 
   it should "filter the results to a subset of the index" in {
-    val term = Set("Enrique")
+    val term = Seq("Enrique")
 
     val action = Exploration(term)
 
@@ -72,7 +72,7 @@ class TestLuceneUtils extends FlatSpec with Matchers{
   }
 
   "The \"Exploration(Enrique)\" action" should "return two documents" in {
-    val term = Set("Enrique")
+    val term = Seq("Enrique")
 
     val action = Exploration(term)
     val results = LuceneHelper.retrieveDocumentNames(action, searcher = searcher)
@@ -82,8 +82,8 @@ class TestLuceneUtils extends FlatSpec with Matchers{
   }
 
   "The \"ExplorationDouble(Enrique, WikiHop)\" action" should "return three documents" in {
-    val termA = Set("Enrique")
-    val termB = Set("WikiHop")
+    val termA = Seq("Enrique")
+    val termB = Seq("WikiHop")
 
     val action = ExplorationDouble(termA, termB)
     val results = LuceneHelper.retrieveDocumentNames(action, searcher = searcher)
@@ -92,8 +92,8 @@ class TestLuceneUtils extends FlatSpec with Matchers{
   }
 
   "The \"Exploitation(Enrique, WikiHop)\" action" should "return one" in {
-    val termA = Set("Enrique")
-    val termB = Set("WikiHop")
+    val termA = Seq("Enrique")
+    val termB = Seq("WikiHop")
 
     val action = Exploitation(termA, termB)
     val results = LuceneHelper.retrieveDocumentNames(action, searcher = searcher)
@@ -102,8 +102,8 @@ class TestLuceneUtils extends FlatSpec with Matchers{
   }
 
   "The \"Cascade(Enrique, WikiHop)\" action" should "return one" in {
-    val termA = Set("Enrique")
-    val termB = Set("WikiHop")
+    val termA = Seq("Enrique")
+    val termB = Seq("WikiHop")
 
     val action = Cascade(termA, termB)
     val results = LuceneHelper.retrieveDocumentNames(action, searcher = searcher)
@@ -112,8 +112,8 @@ class TestLuceneUtils extends FlatSpec with Matchers{
   }
 
   "The \"Cascade(love it, test)\" action" should "return two" in {
-    val termA = Set("love", "it")
-    val termB = Set("test")
+    val termA = Seq("love", "it")
+    val termB = Seq("test")
 
     val action = Cascade(termA, termB)
     val results = LuceneHelper.retrieveDocumentNames(action, searcher = searcher)

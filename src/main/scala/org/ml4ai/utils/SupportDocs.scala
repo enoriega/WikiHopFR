@@ -21,7 +21,7 @@ object SupportDocs {
         throw new UnsupportedOperationException("For now, only training instances are supported")
     }
 
-    val relatedDocs = LuceneHelper.getLexicallySimilarDocuments(source.split(" ").toSet, destination.split(" ").toSet)
+    val relatedDocs = LuceneHelper.getLexicallySimilarDocuments(source.split(' ').toSeq.distinct.sorted, destination.split(' ').toSeq.distinct.sorted)
     localDocs(instance) union relatedDocs.take(200).toSet
   }
 }

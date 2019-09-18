@@ -13,6 +13,7 @@ import org.ml4ai.utils.buildRandom
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 import WikiHopEnvironment.buildKnowledgeGraph
+import edu.cmu.dynet.ExpressionVector
 import edu.cmu.dynet.{ComputationGraph, Expression}
 import org.clulab.embeddings.word2vec
 import org.clulab.embeddings.word2vec.Word2Vec
@@ -33,18 +34,19 @@ class WikiHopEnvironment(val start:String, val end:String, documentUniverse:Opti
 
   // State variables
   private var knowledgeGraph:Option[KnowledgeGraph] = None
+  private var currentEntities: Option[Iterable[Seq[String]]] = None
+
   private var iterationNum:Int = 0
-  private val exploredEntities = new mutable.HashSet[Set[String]]
-  private val exploitedEntities = new mutable.HashSet[Set[String]]
+  private val exploredEntities = new mutable.HashSet[Seq[String]]
+  private val exploitedEntities = new mutable.HashSet[Seq[String]]
   private val papersRead = new mutable.HashSet[String]
   private val rng = buildRandom()
-  private val startTokens = start.split(" ").toSet
-  private val endTokens = end.split(" ").toSet
 
+  val startTokens = start.split(' ').toSeq.distinct.sorted
+  val endTokens = end.split(' ').toSeq.distinct.sorted
 
-
-  private def exploitationEligible(e: Set[String]) = !(exploitedEntities contains e)
-  private def explorationEligible(e: Set[String]) = !(exploredEntities contains e)
+  private def exploitationEligible(e: Seq[String]) = !(exploitedEntities contains e)
+  private def explorationEligible(e: Seq[String]) = !(exploredEntities contains e)
 
 
 
@@ -62,21 +64,18 @@ class WikiHopEnvironment(val start:String, val end:String, documentUniverse:Opti
           )
         // Otherwise, procedurally generate the list of actions
         case Some(kg) =>
-          val currentEntities = kg.entities
-
           val ret = new mutable.ListBuffer[Action]
 
-          currentEntities foreach {
-            e =>
-
+          currentEntities.get foreach { e =>
               if(explorationEligible(e))
                 ret += Exploration(e)
 
               if(exploitationEligible(e))
-                ret += Exploitation(e, end.split(" ").toSet)
+                ret += Exploitation(e, endTokens)
 
-              for(i <- currentEntities if i != e && explorationEligible(i)){
-                ret += ExplorationDouble(e, i)
+              currentEntities.get.foreach { currentEntity =>
+                if (currentEntity != e && explorationEligible(currentEntity))
+                  ret += ExplorationDouble(e, currentEntity)
               }
           }
 
@@ -132,7 +131,7 @@ class WikiHopEnvironment(val start:String, val end:String, documentUniverse:Opti
     */
   var lastConcreteAction:Option[Action] = None
   var numDocumentsAdded:Int = 0
-  var entitySelectionList:List[(Set[String], Set[String])] = Nil
+  var entitySelectionList:List[(Seq[String], Seq[String])] = Nil
 
   override def execute(action: Action, persist: Boolean): Double = {
     // Increment the iteration counter
@@ -178,9 +177,8 @@ class WikiHopEnvironment(val start:String, val end:String, documentUniverse:Opti
     numDocumentsAdded = (fetchedDocs diff papersRead).size
 
     // Update the knowledge graph and keep track of the new papers
-    knowledgeGraph = Some(kg)
+    setKnowledgeGraph(kg)
     papersRead ++= fetchedDocs
-
     reward
   }
 
@@ -260,25 +258,30 @@ class WikiHopEnvironment(val start:String, val end:String, documentUniverse:Opti
     case None => Map.empty
   }
 
-  def entities:Set[Set[String]] = knowledgeGraph match {
-    case Some(kg) => kg.entities.toSet
-    case None => Set.empty
+  def entities: Iterable[Seq[String]] = knowledgeGraph match {
+    case Some(kg) => this.currentEntities.get
+    case None => Seq.empty
+  }
+
+  protected def setKnowledgeGraph(knowledgeGraph: KnowledgeGraph): Unit = {
+    this.knowledgeGraph = Some(knowledgeGraph)
+    this.currentEntities = Some(knowledgeGraph.entities.map { entity => entity.toSeq.sorted })
   }
 
   def readDocumentUniverse(): Unit = documentUniverse match {
     case None => ()
     case Some(docs) =>
-      this.knowledgeGraph = Some(buildKnowledgeGraph(docs))
+      setKnowledgeGraph(buildKnowledgeGraph(docs))
   }
 
-  private def distance(a:Set[String], b:Set[String], helper:EmbeddingsHelper):Float = {
+  private def distance(a:Seq[String], b:Seq[String], helper:EmbeddingsHelper):Float = {
     ComputationGraph.renew()
 
-    val eA = helper.lookup(a).toSeq
-    val eB = helper.lookup(b).toSeq
+    val eA = helper.lookup(a)
+    val eB = helper.lookup(b)
 
-    val averageA = Expression.average(eA:_*)
-    val averageB = Expression.average(eB:_*)
+    val averageA = Expression.average(new ExpressionVector(eA))
+    val averageB = Expression.average(new ExpressionVector(eB))
 
     Expression.l2Norm(averageA - averageB).value().toFloat()
   }
@@ -286,19 +289,19 @@ class WikiHopEnvironment(val start:String, val end:String, documentUniverse:Opti
   /**
     * @return top entities to be considered as target of an action
     */
-  def topEntities(implicit helper:EmbeddingsHelper):Seq[Set[String]] = {
+  def topEntities(implicit helper:EmbeddingsHelper):Seq[Seq[String]] = {
     // Fetch the last set of entities chosen
     entitySelectionList match {
       // If there are no entities selected yet, return the end points
       case Nil =>
-        Seq(this.startTokens, this.endTokens)
+        Seq(startTokens, endTokens)
       case (lastA, lastB)::tail =>
         // Pre-compute a set for efficiency
         val previouslyChosen = entitySelectionList.toSet
         // Get all the possible pairs to consider and discard the already chosen
         val newPairs =
           for{
-            candidate <- knowledgeGraph.get.entities
+            candidate <- currentEntities.get
           } yield { Seq((lastA, candidate), (lastB, candidate))}
 
         // TODO: Clean this code for legibility

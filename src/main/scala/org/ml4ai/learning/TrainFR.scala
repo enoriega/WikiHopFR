@@ -1,6 +1,7 @@
 package org.ml4ai.learning
 
 import com.typesafe.scalalogging.LazyLogging
+import edu.cmu.dynet.Tensor
 import edu.cmu.dynet.{ComputationGraph, Expression, FloatVector, Initialize, ParameterCollection, RMSPropTrainer, Trainer}
 import org.ml4ai.{WHConfig, WikiHopInstance}
 import org.ml4ai.agents.{AgentObserver, EpGreedyPolicy, PolicyAgent}
@@ -29,7 +30,7 @@ object TrainFR extends App with LazyLogging{
     */
   def updateParameters(network:DQN, trainer:Trainer)(implicit rng:Random):Unit = {
     // Sample a mini batch
-    val miniBatch = memory.sample(1000)
+    val miniBatch = memory.sample(1000).toSeq
 
     // TODO: Refactor this parameter
     val GAMMA = .9
@@ -38,47 +39,25 @@ object TrainFR extends App with LazyLogging{
     ComputationGraph.renew()
 
     // Get the states from the batch and the entities associated to the action taken on that transition
-    val states = miniBatch map { m => m.state}
-    val selectedEntities = miniBatch map {
-      tr =>
-        tr.action match {
-          case Exploration(single) => (single, single)
-          case ExplorationDouble(entityA, entityB) => (entityA, entityB)
-          case Exploitation(entityA, entityB) => (entityA, entityB)
-          case _ => throw new NotImplementedException
-        }
+    val selectedEntities: Iterable[(WikiHopState, Seq[String], Seq[String])] = miniBatch map { transition =>
+      transition.action match {
+        case Exploration(single) => (transition.state, single, single)
+        case ExplorationDouble(entityA, entityB) => (transition.state, entityA, entityB)
+        case Exploitation(entityA, entityB) => (transition.state, entityA, entityB)
+        case _ => throw new NotImplementedException
+      }
     }
 
-    // Compute the state action values for all the actions of that (state, entities) argument
-    val stateValues = network((states zip selectedEntities) map { case(s, (ea, eb)) => (s, ea, eb) })
-
-    // Fetch the observed reward of that transition
-    val rewards = miniBatch map { _.reward }
-
     // Fetch the resulting state of the transitions
-    val nextStates = miniBatch map { m => m.nextState }
-    val nextStateValues = // TODO figure out this correctly, this considers the state values of all the possible entity combinations, not just only of  the ones with the top entity
-      max{
-        network{
-          nextStates.flatMap{
-            ns =>
-              val entityPairs =
-                for {
-                  ea <- ns.candidateEntities.get
-                  eb <- ns.candidateEntities.get
-                } yield (ea, eb)
+    val triples = for {
+      transition <- miniBatch
+      ns = transition.nextState
+      es = ns.candidateEntities.get
+      ea <- es
+      eb <- es
+    } yield (ns, ea, eb)
 
-              val ret = entityPairs.toSet.map{
-                ep:(Set[String], Set[String]) =>
-                  ep match {
-                    case (ea, eb) => (ns, ea, eb)
-                  }
-              }
-              ret
-          }.take(100) // Keith: Please look here. Ideally there will not be a take statement here and network.apply,
-                      // but I put it and teste it with multiple values with varying number of elements to reproduce the bug
-        }.value()
-      }
+    val nextStateValues: Tensor = network.evaluate(triples)
 
 //    val updates = (rewards zip nextStateValues) map { case (r, q) => r + GAMMA*q}
 //
@@ -105,14 +84,13 @@ object TrainFR extends App with LazyLogging{
 //    optimizer.update()
   }
 
-
   // Load the data
   val instances = WikiHopParser.trainingInstances
 
   val numEpisodes = WHConfig.Training.episodes
   val targetUpdate = WHConfig.Training.targetUpdate
 
-  Initialize.initialize()
+  Initialize.initialize(Map("random-seed" -> 2522620396L, "dynet-mem" -> "2048"))
   val params = new ParameterCollection()
   implicit val eh: EmbeddingsHelper = new EmbeddingsHelper(params)
   val network = new DQN(params, eh)

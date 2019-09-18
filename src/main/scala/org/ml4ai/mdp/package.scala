@@ -4,7 +4,7 @@ import org.sarsamora.actions.Action
 
 package object mdp {
 
-  def actionBuilder(actionIx:Int, entityA:Set[String], entityB:Set[String]):Action = {
+  def actionBuilder(actionIx:Int, entityA:Seq[String], entityB:Seq[String]):Action = {
     if(actionIx == 0){
       if(entityA == entityB)
         Exploration(entityA)
