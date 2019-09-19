@@ -11,7 +11,7 @@ import scala.collection.mutable.ListBuffer
 
 class TrainingAgentObserver(epsilons:Iterator[Double]) extends AgentObserver with LazyLogging{
   var state:Option[WikiHopState] = None
-  var actionLog:ListBuffer[(Double, Action)] = new ListBuffer[(Double, Action)]()
+  var actionLog:ListBuffer[(Double, Double, Action)] = new ListBuffer[(Double, Double, Action)]()
   val memory = new TransitionMemory[Transition](maxSize = WHConfig.Training.transitionMemorySize)
   val stats = new ListBuffer[EpisodeStats]()
 
@@ -32,7 +32,7 @@ class TrainingAgentObserver(epsilons:Iterator[Double]) extends AgentObserver wit
     val transition = Transition(state.get, action, reward, newState)
     memory remember transition
     state = None
-    actionLog += Tuple2(epsilon, action)
+    actionLog += Tuple3(epsilon, reward, action)
   }
 
   override def endedEpisode(env: WikiHopEnvironment): Unit = {
@@ -46,9 +46,9 @@ class TrainingAgentObserver(epsilons:Iterator[Double]) extends AgentObserver wit
       else
         false
 
-    val (epsilons, actions) = actionLog.unzip
+    val (epsilons, rewards, actions) = actionLog.unzip3
 
-    stats += EpisodeStats(id, numIterations, papersRead, success, epsilons, actions)
+    stats += EpisodeStats(id, numIterations, papersRead, success, epsilons, rewards, actions)
     actionLog.clear()
   }
 
