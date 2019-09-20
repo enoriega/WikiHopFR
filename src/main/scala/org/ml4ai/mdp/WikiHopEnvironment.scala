@@ -32,6 +32,7 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
 
   // Control values
   val maxIterations: Int = WHConfig.Environment.maxIterations
+  val immediateRewardEnabled: Boolean = WHConfig.Environment.immediateRewardEnabled
 
   // State variables
   private var knowledgeGraph:Option[KnowledgeGraph] = None
@@ -100,7 +101,7 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
     * @param action taken
     * @return
     */
-  private def rewardSignal(action: Action, newState:KnowledgeGraph, fetchedPapers:Set[String]):Double = {
+  private def rewardSignal(action: Action, newState:KnowledgeGraph, fetchedPapers:Set[String], immediateRewardEnabled:Boolean = false):Double = {
 
     val newPapers:Int = (fetchedPapers diff papersRead).size
     val newRelations:Int =
@@ -116,15 +117,9 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
     val livingReward = WHConfig.Environment.livingReward
     val sigmoidFactor = successReward*0.5 // TODO Parameterize the ratio
 
-    val informationRatio = if(newPapers > 0) newRelations / newPapers else 0
-
-    val scaledInformationRatio = sigmoid(informationRatio-sigmoidFactor) * sigmoidFactor
-
-    val standardReward = scaledInformationRatio - livingReward
-
     val outcomeReward: Double =
-      if(finishedEpisode) {
-        if(outcome.nonEmpty)
+      if (finishedEpisode) {
+        if (outcome.nonEmpty)
           successReward
         else
           failureReward
@@ -132,7 +127,17 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
       else
         0
 
-    standardReward + outcomeReward
+    if(immediateRewardEnabled) {
+      val informationRatio = if (newPapers > 0) newRelations / newPapers else 0
+
+      val scaledInformationRatio = sigmoid(informationRatio - sigmoidFactor) * sigmoidFactor
+
+      val standardReward = scaledInformationRatio - livingReward
+
+      standardReward + outcomeReward
+    }
+    else
+      outcomeReward
   }
 
   /**
@@ -186,7 +191,7 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
     // Generate new KG from the documents
     val expandedDocuments = fetchedDocs union papersRead
     val kg = buildKnowledgeGraph(expandedDocuments)
-    val reward = rewardSignal(action, kg, fetchedDocs)
+    val reward = rewardSignal(action, kg, fetchedDocs, immediateRewardEnabled)
 
     // Keep track of how many documents were added
     numDocumentsAdded = (fetchedDocs diff papersRead).size

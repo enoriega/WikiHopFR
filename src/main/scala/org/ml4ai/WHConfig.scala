@@ -53,6 +53,7 @@ object WHConfig {
     val cacheAnnotations: Boolean = f.getBoolean("cacheAnnotations")
     val topEntitiesNum: Int = f.getInt("topEntitiesNum")
     val maxIterations: Int = f.getInt("maxIterations")
+    val immediateRewardEnabled: Boolean = f.getBoolean("immediateRewardEnabled")
   }
 
   object Benchmark {
