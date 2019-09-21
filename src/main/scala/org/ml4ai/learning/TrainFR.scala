@@ -167,7 +167,16 @@ object TrainFR extends App with LazyLogging{
     // Take a slice of the instances
     val instancesBatch = streamIterator take targetUpdate
     // Pre-sample the epsilon values
-    val epsilonVals = epsilonDecay take WHConfig.Environment.maxIterations toSeq
+//    val epsilonVals = epsilonDecay take WHConfig.Environment.maxIterations toSeq
+    val epsilonVals = new Iterator[Double]{
+      override def hasNext: Boolean = true
+
+      override def next(): Double = {
+        epsilonDecay.synchronized{
+          epsilonDecay.next()
+        }
+      }
+    }
     // Let the cores do their work on the first slice of instances
     val slices = instancesBatch.grouped(WHConfig.Training.maxThreads)
 
@@ -180,9 +189,9 @@ object TrainFR extends App with LazyLogging{
               val f =
                 Future {
                   // Set up the body of the future
-                  val policy = new EpGreedyPolicy(epsilonVals.iterator, network)
+                  val policy = new EpGreedyPolicy(epsilonVals, network)
                   val agent = new PolicyAgent(policy)
-                  val observer: AgentObserver = new TrainingAgentObserver(epsilonVals.iterator)
+                  val observer: AgentObserver = new TrainingAgentObserver(epsilonVals)
                   val outcome = agent.runEpisode(instance, Some(observer))
                   (outcome, observer)
                 }
@@ -218,7 +227,7 @@ object TrainFR extends App with LazyLogging{
     // Do a back propagation step and send info to the log
     val successRate = successes / targetUpdate.toFloat
     logger.info(s"Current episode: $ep out of $numEpisodes")
-    logger.info(s"Current ε = ${epsilonVals.last}")
+    logger.info(s"Current ε = ${epsilonDecay.next()}")
     logger.info(s"Success rate of $successRate for the last $targetUpdate episodes")
     val (iterationDist, documentDist) = computeStats(stats)
     logger.info(s"Iterations:\n${prettyPrintMap(iterationDist)}")
