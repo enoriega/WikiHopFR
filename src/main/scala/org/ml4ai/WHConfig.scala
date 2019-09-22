@@ -86,6 +86,8 @@ object WHConfig {
 
       val upperBound:Double = g.getDouble("upperBound")
       val lowerBound:Double = g.getDouble("lowerBound")
+      val kind:String = g.getString("kind")
+      val length:Double = g.getDouble("length")
     }
 
     val statsDump:String = f.getString("statsDump")

@@ -131,7 +131,40 @@ object TrainFR extends App with LazyLogging{
   val network = new DQN()
   network.reset()
 
-  val epsilonDecay = Decays.exponentialDecay(WHConfig.Training.Epsilon.upperBound, WHConfig.Training.Epsilon.lowerBound, numEpisodes, 0).iterator
+  // Set up the ε decay
+
+  def linearDecay(upperBound:Double, lowerBound:Double, steps:Int, delay:Int) = {
+    val prefix = Stream.fill(delay)(upperBound)
+    val slope = (upperBound - lowerBound) / steps
+    val decay =
+      for(i <- 0 until steps) yield upperBound - (slope*i)
+    val suffix = Stream.continually(lowerBound)
+
+    prefix ++ decay ++ suffix
+  }
+
+  val decayFactory = WHConfig.Training.Epsilon.kind match {
+    case "linear" => linearDecay _
+    case "exponential" => Decays.exponentialDecay _
+    case invalid =>
+      val err = s"Unsupported ε decay: $invalid"
+      logger.error(err)
+      throw new UnsupportedOperationException(err)
+  }
+
+  val epsilonDecay = decayFactory(WHConfig.Training.Epsilon.upperBound, WHConfig.Training.Epsilon.lowerBound, (numEpisodes*WHConfig.Training.Epsilon.length).toInt, 0).iterator
+
+  // Make the ε iterator thread-safe with an anonymous monitor
+  val epsilonIterator = new Iterator[Double]{
+    override def hasNext: Boolean = true // This is an infinite iterator
+
+    override def next(): Double = {
+      epsilonDecay.synchronized{
+        epsilonDecay.next()
+      }
+    }
+  }
+
   val memory = new TransitionMemory[Transition](maxSize = WHConfig.Training.transitionMemorySize)
 
   val smallInstances = selectSmall(instances)
@@ -166,17 +199,7 @@ object TrainFR extends App with LazyLogging{
     logger.debug(s"Epoch $ep")
     // Take a slice of the instances
     val instancesBatch = streamIterator take targetUpdate
-    // Pre-sample the epsilon values
-//    val epsilonVals = epsilonDecay take WHConfig.Environment.maxIterations toSeq
-    val epsilonVals = new Iterator[Double]{
-      override def hasNext: Boolean = true
 
-      override def next(): Double = {
-        epsilonDecay.synchronized{
-          epsilonDecay.next()
-        }
-      }
-    }
     // Let the cores do their work on the first slice of instances
     val slices = instancesBatch.grouped(WHConfig.Training.maxThreads)
 
@@ -189,9 +212,9 @@ object TrainFR extends App with LazyLogging{
               val f =
                 Future {
                   // Set up the body of the future
-                  val policy = new EpGreedyPolicy(epsilonVals, network)
+                  val policy = new EpGreedyPolicy(epsilonIterator, network)
                   val agent = new PolicyAgent(policy)
-                  val observer: AgentObserver = new TrainingAgentObserver(epsilonVals)
+                  val observer: AgentObserver = new TrainingAgentObserver(epsilonIterator)
                   val outcome = agent.runEpisode(instance, Some(observer))
                   (outcome, observer)
                 }
