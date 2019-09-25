@@ -211,10 +211,12 @@ object TrainFR extends App with LazyLogging{
               // Dispatch the agent asynchronously
               val f =
                 Future {
+                  // Create a constant iterator with the current value of ε
+                  val epsilonStream = Stream.continually(epsilonIterator.next())
                   // Set up the body of the future
-                  val policy = new EpGreedyPolicy(epsilonIterator, network)
+                  val policy = new EpGreedyPolicy(epsilonStream.iterator, network)
                   val agent = new PolicyAgent(policy)
-                  val observer: AgentObserver = new TrainingAgentObserver(epsilonIterator)
+                  val observer: AgentObserver = new TrainingAgentObserver(epsilonStream.iterator)
                   val outcome = agent.runEpisode(instance, Some(observer))
                   (outcome, observer)
                 }
