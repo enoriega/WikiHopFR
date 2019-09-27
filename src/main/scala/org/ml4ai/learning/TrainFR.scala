@@ -1,6 +1,6 @@
 package org.ml4ai.learning
 
-import java.io.File
+import java.io.{File, PrintWriter}
 import java.nio.charset.Charset
 import java.util.concurrent.{ExecutorService, Executors}
 
@@ -153,17 +153,7 @@ object TrainFR extends App with LazyLogging{
   }
 
   val epsilonDecay = decayFactory(WHConfig.Training.Epsilon.upperBound, WHConfig.Training.Epsilon.lowerBound, (numEpisodes*WHConfig.Training.Epsilon.length).toInt, 0).iterator
-
-  // Make the ε iterator thread-safe with an anonymous monitor
-  val epsilonIterator = new Iterator[Double]{
-    override def hasNext: Boolean = true // This is an infinite iterator
-
-    override def next(): Double = {
-      epsilonDecay.synchronized{
-        epsilonDecay.next()
-      }
-    }
-  }
+  val epsilonIterator = epsilonDecay
 
   val memory = new TransitionMemory[Transition](maxSize = WHConfig.Training.transitionMemorySize)
 
@@ -201,7 +191,7 @@ object TrainFR extends App with LazyLogging{
     val instancesBatch = streamIterator take targetUpdate
 
     // Let the cores do their work on the first slice of instances
-    val slices = instancesBatch.grouped(WHConfig.Training.maxThreads)
+    val slices = instancesBatch.grouped(WHConfig.Training.maxThreads).toList
 
     val futures =
       (for(slice <- slices) yield {
@@ -209,10 +199,11 @@ object TrainFR extends App with LazyLogging{
           slice map {
             instance =>
               // Dispatch the agent asynchronously
+              val epsilonValue = epsilonIterator.next()
               val f =
                 Future {
                   // Create a constant iterator with the current value of ε
-                  val epsilonStream = Stream.continually(epsilonIterator.next())
+                  val epsilonStream = Stream.continually(epsilonValue)
                   // Set up the body of the future
                   val policy = new EpGreedyPolicy(epsilonStream.iterator, network)
                   val agent = new PolicyAgent(policy)
