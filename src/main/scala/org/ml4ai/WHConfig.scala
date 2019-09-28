@@ -98,4 +98,11 @@ object WHConfig {
     private val f = config.getConfig("httpClient")
     val server:String = f.getString("server")
   }
+
+  object Testing {
+    private val f = config.getConfig("testing")
+    val modelName: String = f.getString("modelName")
+    val statsDump:String = f.getString("statsDump")
+    val maxThreads:Int = f.getInt("maxThreads")
+  }
 }

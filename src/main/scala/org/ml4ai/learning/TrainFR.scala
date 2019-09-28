@@ -207,7 +207,7 @@ object TrainFR extends App with LazyLogging{
                   // Set up the body of the future
                   val policy = new EpGreedyPolicy(epsilonStream.iterator, network)
                   val agent = new PolicyAgent(policy)
-                  val observer: AgentObserver = new TrainingAgentObserver(epsilonStream.iterator)
+                  val observer: AgentObserver = new RuntimeAgentObserver(epsilonStream.iterator)
                   val outcome = agent.runEpisode(instance, Some(observer))
                   (outcome, observer)
                 }
@@ -233,7 +233,7 @@ object TrainFR extends App with LazyLogging{
     val successes = outcomes count (_.nonEmpty)
     // Aggregate observers' data
     val (partialMemories, partialStats) = observers map {
-      case o:TrainingAgentObserver => (o.memory, o.stats)
+      case o:RuntimeAgentObserver => (o.memory, o.stats)
     } unzip
     // Aggregate the stats
     val stats = partialStats.flatten

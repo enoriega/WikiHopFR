@@ -18,7 +18,7 @@ import scala.io.Source
 import scala.util.{Failure, Success, Try}
 
 
-class DQN(init_to_zero:Boolean = !WHConfig.Environment.immediateRewardEnabled) extends LazyLogging{
+class DQN(initToZero:Boolean = !WHConfig.Environment.immediateRewardEnabled) extends LazyLogging{
 
   private implicit val httpClient: CloseableHttpClient = HttpClients.createDefault
 
@@ -55,7 +55,7 @@ class DQN(init_to_zero:Boolean = !WHConfig.Environment.immediateRewardEnabled) e
 
   def reset(): Unit = {
     val endpoint = WHConfig.HttpClient.server
-    val arg = if(init_to_zero) "?zero_init=true" else "?zero_init=false"
+    val arg = if(initToZero) "?zero_init=true" else "?zero_init=false"
     val request = new HttpGet(s"$endpoint/reset$arg")
     val _ = httpClient.execute(request)
   }
