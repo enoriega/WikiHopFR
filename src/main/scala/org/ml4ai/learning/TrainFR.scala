@@ -171,8 +171,8 @@ object TrainFR extends App with LazyLogging{
 
   // Operate asynchronously with $targetUpdate futures simultaneously
   //implicit val executionContext: ExecutionContext = ExecutionContext.Implicits.global
+  private val threadPool: ExecutorService = Executors.newFixedThreadPool(WHConfig.Training.maxThreads)
   implicit val ec: ExecutionContext = new ExecutionContext {
-    val threadPool: ExecutorService = Executors.newFixedThreadPool(WHConfig.Training.maxThreads)
 
     def execute(runnable: Runnable) {
       threadPool.submit(runnable)
@@ -254,10 +254,5 @@ object TrainFR extends App with LazyLogging{
     network.save(checkpointName)
   }
 
-
-  // Do dataset split
-  // Define the batch size
-  // Collect the observations
-  // Perform the update
-  // Test for convergence
+  threadPool.shutdown()
 }
