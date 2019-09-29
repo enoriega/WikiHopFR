@@ -161,7 +161,7 @@ object TrainFR extends App with LazyLogging{
   val streamIterator = Stream.continually(smallInstances.toStream).flatten.iterator
 
   // Load file names
-  val checkpointName = WHConfig.Training.modelName
+  val checkpointSuffix = WHConfig.Training.modelName
   val statsDump = new File(WHConfig.Training.statsDump)
   // Trim the file to start from scratch
   FileUtils.write(statsDump, "", Charset.defaultCharset)
@@ -250,6 +250,7 @@ object TrainFR extends App with LazyLogging{
     logger.info(s"Papers read:\n${prettyPrintMap(documentDist)}")
     FileUtils.writeLines(statsDump, stats.map(_.toString).asJava, true)
     updateParameters(network)
+    val checkpointName = s"${ep}_$checkpointSuffix"
     logger.info(s"Saving checkpoint as $checkpointName")
     network.save(checkpointName)
   }
