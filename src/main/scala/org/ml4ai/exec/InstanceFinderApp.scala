@@ -4,12 +4,12 @@ import com.typesafe.scalalogging.LazyLogging
 import org.clulab.utils.Serializer
 import org.ml4ai.agents.baseline.{CascadeAgent, RandomActionAgent}
 import org.ml4ai.agents.{BaseAgent, StatsObserver}
-import org.ml4ai.utils.prettyPrintMap
-import org.ml4ai.utils.{BenchmarkStats, StatsDatum, WikiHopParser, rng}
+import org.ml4ai.utils.{BenchmarkStats, StatsDatum, WikiHopParser, prettyPrintMap, rng, using}
 import org.ml4ai.{WHConfig, WikiHopInstance}
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.io.Source
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -22,12 +22,18 @@ object InstanceFinderApp extends App with LazyLogging{
   // Take the number of instances
   val allInstances = WikiHopParser.trainingInstances
 
+  val names =
+    using(Source.fromFile("small_instances.txt")){
+      s =>
+        s.getLines().toSet
+    }
+
   val instances = allInstances filter {
     i =>
       // Insert criteria here
       val size = i.supportDocs.size
-      size >= 10 && size <= 20
-  } take (1000)
+      !(names contains i.id) && size >= 10 && size <= 20
+  } take (10000)
 
   val totalInstances = instances.size
   logger.info(s"About to run FocusedReading on $totalInstances instances")

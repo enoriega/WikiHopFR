@@ -7,7 +7,8 @@ import java.util.concurrent.{ExecutorService, Executors}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import org.apache.http.impl.client.{CloseableHttpClient, HttpClients}
-import org.ml4ai.agents.{AgentObserver, GreedyPolicy, PolicyAgent}
+import org.ml4ai.agents.baseline.{CascadeAgent, DeterministicAgent, RandomActionAgent}
+import org.ml4ai.agents.{AgentObserver, GreedyPolicy, Policy, PolicyAgent}
 import org.ml4ai.utils.{FutureUtils, WikiHopParser, lemmatize, prettyPrintMap, rng, using}
 import org.ml4ai.{WHConfig, WikiHopInstance}
 
@@ -55,8 +56,6 @@ object TestFR extends App with LazyLogging{
 
   // Load the data
   val instances = WikiHopParser.trainingInstances
-
-  val network = new DQN()
   
   val smallInstances = selectSmall(instances)
 
@@ -87,6 +86,18 @@ object TestFR extends App with LazyLogging{
     }
   }
 
+  // Get the specific agent from the config
+  def makeAgent():DeterministicAgent = {
+    WHConfig.Testing.agentType match {
+      case "Policy" =>
+        val policy = new GreedyPolicy(new DQN())
+        new PolicyAgent(policy)
+      case "Random" =>
+        new RandomActionAgent()
+      case "Cascade" =>
+        new CascadeAgent()
+    }
+  }
 
   // Let the cores do their work on the first slice of instances
   val slices = smallInstances.grouped(WHConfig.Testing.maxThreads)
@@ -101,9 +112,8 @@ object TestFR extends App with LazyLogging{
             val f =
               Future {
                 // Set up the body of the future
-                val policy = new GreedyPolicy(network)
-                val agent = new PolicyAgent(policy)
-                val observer: AgentObserver = new RuntimeAgentObserver(Stream.continually(0.0).iterator)
+                val agent = makeAgent()
+                val observer: AgentObserver = new TestingAgentObserver
                 val outcome = agent.runEpisode(instance, Some(observer))
                 (outcome, observer)
               }
@@ -134,14 +144,14 @@ object TestFR extends App with LazyLogging{
   // Aggregate the results
   val successes = outcomes count (_.nonEmpty)
   // Aggregate observers' data
-  val (partialMemories, partialStats) = observers map {
-    case o:RuntimeAgentObserver => (o.memory, o.stats)
-  } unzip
+  val partialStats = observers map {
+    case o:TestingAgentObserver => o.stats
+  }
   // Aggregate the stats
   val stats = partialStats.flatten
 
   // Do a back propagation step and send info to the log
-  val successRate = successes.toFloat / instances.size
+  val successRate = successes.toFloat / smallInstances.size
   logger.info(s"Success rate of $successRate.")
   val (iterationDist, documentDist) = computeStats(stats)
   logger.info(s"Iterations:\n${prettyPrintMap(iterationDist)}")

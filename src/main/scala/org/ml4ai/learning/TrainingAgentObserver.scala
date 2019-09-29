@@ -9,7 +9,7 @@ import org.sarsamora.actions.Action
 
 import scala.collection.mutable.ListBuffer
 
-class RuntimeAgentObserver(epsilons:Iterator[Double]) extends AgentObserver with LazyLogging{
+class TrainingAgentObserver(epsilons:Iterator[Double]) extends AgentObserver with LazyLogging{
   var state:Option[WikiHopState] = None
   var actionLog:ListBuffer[(Double, Double, Action)] = new ListBuffer[(Double, Double, Action)]()
   val memory = new TransitionMemory[Transition](maxSize = WHConfig.Training.transitionMemorySize)
