@@ -2,7 +2,7 @@ package org.ml4ai.agents
 
 import org.apache.http.impl.client.{CloseableHttpClient, HttpClients}
 import org.json4s.JsonAST.{JArray, JDouble, JField, JInt, JObject, JString, JValue}
-import org.ml4ai.learning.DQN
+import org.ml4ai.learning.Approximator
 import org.ml4ai.mdp.{RandomAction, WikiHopState}
 import org.sarsamora.actions.Action
 import org.ml4ai.mdp.actionBuilder
@@ -12,7 +12,7 @@ import org.json4s.native.JsonMethods._
 
 import scala.util.Random
 
-class EpGreedyPolicy(decay:Iterator[Double], network:DQN)(implicit rng:Random) extends Policy {
+class EpGreedyPolicy(decay:Iterator[Double], network:Approximator)(implicit rng:Random) extends Policy {
 
   private implicit val httpClient: CloseableHttpClient = HttpClients.createDefault
 

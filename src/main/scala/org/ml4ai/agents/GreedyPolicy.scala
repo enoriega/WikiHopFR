@@ -1,5 +1,5 @@
 package org.ml4ai.agents
 
-import org.ml4ai.learning.DQN
+import org.ml4ai.learning.Approximator
 
-class GreedyPolicy(network:DQN) extends EpGreedyPolicy(Stream.continually(0.0).iterator, network)(org.ml4ai.utils.buildRandom(0))
+class GreedyPolicy(network:Approximator) extends EpGreedyPolicy(Stream.continually(0.0).iterator, network)(org.ml4ai.utils.buildRandom(0))

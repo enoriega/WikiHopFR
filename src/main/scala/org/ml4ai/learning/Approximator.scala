@@ -17,8 +17,10 @@ import org.ml4ai.utils._
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
 
+class DQN(initToZero:Boolean = !WHConfig.Environment.immediateRewardEnabled) extends Approximator(initToZero,"dqn")
+class LinearQN(initToZero:Boolean = !WHConfig.Environment.immediateRewardEnabled) extends Approximator(initToZero,"linear")
 
-class DQN(initToZero:Boolean = !WHConfig.Environment.immediateRewardEnabled) extends LazyLogging{
+abstract class Approximator(initToZero:Boolean, functionalForm:String) extends LazyLogging{
 
   private implicit val httpClient: CloseableHttpClient = HttpClients.createDefault
 
@@ -55,13 +57,15 @@ class DQN(initToZero:Boolean = !WHConfig.Environment.immediateRewardEnabled) ext
 
   def reset(): Unit = {
     val endpoint = WHConfig.HttpClient.server
-    val arg = if(initToZero) "?zero_init=true" else "?zero_init=false"
-    val request = new HttpGet(s"$endpoint/reset$arg")
+    val arg1 = if(initToZero) "?zero_init=true" else "?zero_init=false"
+    val arg2 = s"approximator=$functionalForm"
+    val args = "?" + Seq(arg1, arg2).mkString("&")
+    val request = new HttpGet(s"$endpoint/reset$args")
     val _ = httpClient.execute(request)
   }
 }
 
-object DQN {
+object Approximator {
   implicit def actionIndex(action:Action):Int = action match {
     case _:Exploration => 0
     case _:ExplorationDouble => 1

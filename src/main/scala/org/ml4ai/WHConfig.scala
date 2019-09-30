@@ -80,6 +80,7 @@ object WHConfig {
     val targetUpdate: Int = f.getInt("targetUpdate")
     val transitionMemorySize: Int = f.getInt("transitionMemorySize")
     val modelName: String = f.getString("modelName")
+    val approximator: String = f.getString("approximator").toLowerCase
 
     object Epsilon {
       private val g = f.getConfig("epsilon")
@@ -101,6 +102,7 @@ object WHConfig {
 
   object Testing {
     private val f = config.getConfig("testing")
+    val approximator: String = f.getString("approximator").toLowerCase
     val agentType: String = f.getString("agentType")
     val modelName: String = f.getString("modelName")
     val statsDump:String = f.getString("statsDump")

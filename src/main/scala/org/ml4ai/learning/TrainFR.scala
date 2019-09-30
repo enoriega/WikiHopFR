@@ -45,7 +45,7 @@ object TrainFR extends App with LazyLogging{
   /**
     * Updates the network with a minibatch
     */
-  def updateParameters(network:DQN)(implicit rng:Random):Unit = {
+  def updateParameters(network:Approximator)(implicit rng:Random):Unit = {
     // Sample a mini batch
     val miniBatch = memory.sample(1000)
 
@@ -128,7 +128,17 @@ object TrainFR extends App with LazyLogging{
   val targetUpdate = WHConfig.Training.targetUpdate
 
 
-  val network = new DQN()
+  val network:Approximator = WHConfig.Testing.approximator match {
+    case "dqn" =>
+      new DQN()
+    case "linear" =>
+      new LinearQN()
+    case a =>
+      val msg = s"Undefined approximator: $a"
+      logger.error(msg)
+      throw new UnsupportedOperationException(msg)
+  }
+
   network.reset()
 
   // Set up the ε decay

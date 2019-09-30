@@ -90,7 +90,17 @@ object TestFR extends App with LazyLogging{
   def makeAgent():DeterministicAgent = {
     WHConfig.Testing.agentType match {
       case "Policy" =>
-        val policy = new GreedyPolicy(new DQN())
+        val approximator = WHConfig.Testing.approximator match {
+          case "dqn" =>
+            new DQN()
+          case "linear" =>
+            new LinearQN()
+          case a =>
+            val msg = s"Undefined approximator: $a"
+            logger.error(msg)
+            throw new UnsupportedOperationException(msg)
+        }
+        val policy = new GreedyPolicy(approximator)
         new PolicyAgent(policy)
       case "Random" =>
         new RandomActionAgent()
