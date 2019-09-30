@@ -57,7 +57,7 @@ abstract class Approximator(initToZero:Boolean, functionalForm:String) extends L
 
   def reset(): Unit = {
     val endpoint = WHConfig.HttpClient.server
-    val arg1 = if(initToZero) "?zero_init=true" else "?zero_init=false"
+    val arg1 = if(initToZero) "zero_init=true" else "zero_init=false"
     val arg2 = s"approximator=$functionalForm"
     val args = "?" + Seq(arg1, arg2).mkString("&")
     val request = new HttpGet(s"$endpoint/reset$args")
