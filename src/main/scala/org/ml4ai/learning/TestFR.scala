@@ -8,7 +8,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import org.apache.http.impl.client.{CloseableHttpClient, HttpClients}
 import org.ml4ai.agents.baseline.{CascadeAgent, DeterministicAgent, RandomActionAgent}
-import org.ml4ai.agents.{AgentObserver, GreedyPolicy, Policy, PolicyAgent}
+import org.ml4ai.agents.{AgentObserver, GreedyPolicy, PolicyAgent}
 import org.ml4ai.utils.{FutureUtils, WikiHopParser, lemmatize, prettyPrintMap, rng, using}
 import org.ml4ai.{WHConfig, WikiHopInstance}
 
@@ -86,20 +86,29 @@ object TestFR extends App with LazyLogging{
     }
   }
 
+  def makeApproximator():Approximator = {
+    val ret =
+      WHConfig.Testing.approximator match {
+        case "dqn" =>
+          new DQN()
+        case "linear" =>
+          new LinearQN()
+        case a =>
+          val msg = s"Undefined approximator: $a"
+          logger.error(msg)
+          throw new UnsupportedOperationException(msg)
+      }
+    // Load the model file
+    ret.load(WHConfig.Testing.modelName)
+    ret
+  }
+
+  private lazy val approximator = makeApproximator()
+
   // Get the specific agent from the config
   def makeAgent():DeterministicAgent = {
     WHConfig.Testing.agentType match {
       case "Policy" =>
-        val approximator = WHConfig.Testing.approximator match {
-          case "dqn" =>
-            new DQN()
-          case "linear" =>
-            new LinearQN()
-          case a =>
-            val msg = s"Undefined approximator: $a"
-            logger.error(msg)
-            throw new UnsupportedOperationException(msg)
-        }
         val policy = new GreedyPolicy(approximator)
         new PolicyAgent(policy)
       case "Random" =>

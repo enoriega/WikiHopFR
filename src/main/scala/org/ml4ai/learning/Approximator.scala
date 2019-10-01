@@ -63,6 +63,12 @@ abstract class Approximator(initToZero:Boolean, functionalForm:String) extends L
     val request = new HttpGet(s"$endpoint/reset$args")
     val _ = httpClient.execute(request)
   }
+
+  def load(modelName:String): Unit = {
+    val endpoint = WHConfig.HttpClient.server
+    val request = new HttpPost(s"$endpoint/load?name=$modelName")
+    val _ = httpClient.execute(request)
+  }
 }
 
 object Approximator {
