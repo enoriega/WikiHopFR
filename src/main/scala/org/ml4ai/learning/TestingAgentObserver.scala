@@ -37,7 +37,7 @@ class TestingAgentObserver extends AgentObserver with LazyLogging{
 
     val (rewards, actions) = actionLog.unzip
 
-    stats += EpisodeStats(id, numIterations, papersRead, success, Seq.empty, rewards, actions)
+    stats += EpisodeStats(id, numIterations, papersRead, success, Stream.continually(.0), rewards, actions)
     actionLog.clear()
   }
 
