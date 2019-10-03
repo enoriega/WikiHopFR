@@ -128,7 +128,7 @@ object TrainFR extends App with LazyLogging{
   val targetUpdate = WHConfig.Training.targetUpdate
 
 
-  val network:Approximator = WHConfig.Testing.approximator match {
+  val network:Approximator = WHConfig.Training.approximator match {
     case "dqn" =>
       new DQN()
     case "linear" =>
