@@ -54,6 +54,7 @@ object WHConfig {
     val topEntitiesNum: Int = f.getInt("topEntitiesNum")
     val maxIterations: Int = f.getInt("maxIterations")
     val immediateRewardEnabled: Boolean = f.getBoolean("immediateRewardEnabled")
+    val entitySelection: String = f.getString("entitySelection")
   }
 
   object Benchmark {

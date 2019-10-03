@@ -353,6 +353,17 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
     ret
   }
 
+  private def combinedRank(pairs:Seq[(Set[String], Set[String])]):Seq[Float] = {
+    pairs map {
+      case (ea, eb) =>
+        this.knowledgeGraph match {
+          case Some(kg) =>
+            (kg.degrees.getOrElse(ea, 0) + kg.degrees.getOrElse(eb, 0)).toFloat
+          case None => 0f
+        }
+    }
+  }
+
   /**
     * @return top entities to be considered as target of an action
     */
@@ -362,15 +373,25 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
       // If there are no entities selected yet, return the end points
       case Nil =>
         Seq(this.startTokens, this.endTokens)
-      case (lastA, lastB)::tail =>
+      case (lastA, lastB)::_ =>
         // Pre-compute a set for efficiency
         val previouslyChosen = entitySelectionList.toSet
+
         // Get all the possible pairs to consider and discard the already chosen
         val newPairs =
           for{
             candidate <- knowledgeGraph.get.entities
           } yield { Seq((lastA, candidate), (lastB, candidate))}
 
+
+        val criteria = WHConfig.Environment.entitySelection.toLowerCase match {
+          case "distance" => distance _
+          case "rank" => combinedRank _
+          case t =>
+            val message = s"Unimplemented entity selection criteria: $t"
+            logger.error(message)
+            throw new NotImplementedError(message)
+        }
 
         // Filter out the elements that have been tested before
         val pairsToTest =
@@ -387,10 +408,11 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
           }
 
         // Compute their distances in vector space
-        val distances = distance(pairsToTest)
+        val scores = criteria(pairsToTest)
 
         // Take the top N entities by their distance
-        (pairsToTest zip distances).sortBy(_._2).take(WHConfig.Environment.topEntitiesNum).map(_._1._2)
+        (pairsToTest zip scores).sortBy(_._2).take(WHConfig.Environment.topEntitiesNum).map(_._1._2)
+
     }
   }
 
