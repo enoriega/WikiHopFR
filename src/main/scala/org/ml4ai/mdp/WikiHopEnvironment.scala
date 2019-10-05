@@ -59,9 +59,11 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
       knowledgeGraph match {
         // If this is the first call and there isn't a KG yet, generate the actions given those two nodes
         case None =>
+          (if(!WHConfig.Environment.excludeExplorationSingle)
+            List(Exploration(endTokens), Exploration(startTokens))
+          else
+            Nil) :::
           List(
-            Exploration(startTokens),
-            Exploration(endTokens),
             ExplorationDouble(startTokens, endTokens),
             Exploitation(startTokens, endTokens)
           )
@@ -74,8 +76,10 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
           currentEntities foreach {
             e =>
 
-              if(explorationEligible(e))
-                ret += Exploration(e)
+              if(!WHConfig.Environment.excludeExplorationSingle) {
+                if (explorationEligible(e))
+                  ret += Exploration(e)
+              }
 
               if(exploitationEligible(e))
                 ret += Exploitation(e, end.split(" ").toSet)

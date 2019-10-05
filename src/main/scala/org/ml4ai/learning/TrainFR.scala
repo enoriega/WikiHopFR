@@ -222,7 +222,18 @@ object TrainFR extends App with LazyLogging{
                   (outcome, observer)
                 }
               // Attach a non-blocking timeout to the future
-              FutureUtils.futureWithTimeout(f, 1.minute)
+              val future =
+                FutureUtils.futureWithTimeout(f, 1.minute)
+
+              // Attach an onComplete call back to record in case there's an error or time out
+              future onComplete {
+                case Failure(exception) =>
+                  logger.error(s"Training future failure for ${instance.id}: $exception")
+                case _ => () // Anything else just ignore it
+              }
+
+              // Return the future
+              future
           } toSeq // This call toSeq is necessary to not consume the iterable after awaiting for the results
 
         // Block on the futures to collect the results and do back propagation
