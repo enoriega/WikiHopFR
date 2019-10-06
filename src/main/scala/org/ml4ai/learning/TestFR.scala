@@ -7,7 +7,7 @@ import java.util.concurrent.{ExecutorService, Executors}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import org.apache.http.impl.client.{CloseableHttpClient, HttpClients}
-import org.ml4ai.agents.baseline.{CascadeAgent, DeterministicAgent, RandomActionAgent}
+import org.ml4ai.agents.baseline.{CascadeAgent, DeterministicAgent, ExploitAgent, ExploreAgent, RandomActionAgent}
 import org.ml4ai.agents.{AgentObserver, GreedyPolicy, PolicyAgent}
 import org.ml4ai.utils.{FutureUtils, WikiHopParser, lemmatize, prettyPrintMap, rng, using}
 import org.ml4ai.{WHConfig, WikiHopInstance}
@@ -115,6 +115,10 @@ object TestFR extends App with LazyLogging{
         new RandomActionAgent()
       case "Cascade" =>
         new CascadeAgent()
+      case "Exploit" =>
+        new ExploitAgent()
+      case "Explore" =>
+        new ExploreAgent()
     }
   }
 
