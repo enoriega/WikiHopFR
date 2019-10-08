@@ -17,7 +17,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.io.Source
 import scala.language.postfixOps
-import scala.util.Success
+import scala.util.{Failure, Success}
 
 object TestFR extends App with LazyLogging{
 
@@ -146,7 +146,9 @@ object TestFR extends App with LazyLogging{
             val timedOutFuture = FutureUtils.futureWithTimeout(f, 1.minute)
 
             timedOutFuture onComplete {
-              _ =>
+              case Failure(exception) =>
+                logger.error(s"Error on ${instance.id}: $exception")
+              case _ =>
                 logger.info(s"Finished with ${instance.id}")
             }
             timedOutFuture
