@@ -127,13 +127,13 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
 //    val successReward = WHConfig.Environment.successReward
 //    val failureReward = WHConfig.Environment.failureReward
     val successReward =
-      (if(WikiHopEnvironment.papersRequired.contains(id)) {
+      ((if(WikiHopEnvironment.papersRequired.contains(id)) {
           WikiHopEnvironment.papersRequired(id)
         }
         else {
           logger.error(s"Key $id not found in papers required")
-          0
-      }) / papersRead.size.toDouble
+          WHConfig.Environment.successReward
+      }) / papersRead.size.toDouble) * 100
 
     val failureReward = -successReward
     val livingReward = WHConfig.Environment.livingReward
@@ -144,7 +144,7 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
         if (outcome.nonEmpty)
           successReward
         else
-          failureReward
+            failureReward
       }
       else
         0
