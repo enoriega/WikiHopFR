@@ -17,8 +17,8 @@ import org.ml4ai.utils._
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
 
-class DQN(initToZero:Boolean = !WHConfig.Environment.immediateRewardEnabled) extends Approximator(initToZero,"dqn")
-class LinearQN(initToZero:Boolean = !WHConfig.Environment.immediateRewardEnabled) extends Approximator(initToZero,"linear")
+class DQN(initToZero:Boolean = false) extends Approximator(initToZero,"dqn")
+class LinearQN(initToZero:Boolean = false) extends Approximator(initToZero,"linear")
 
 abstract class Approximator(initToZero:Boolean, functionalForm:String) extends LazyLogging{
 
