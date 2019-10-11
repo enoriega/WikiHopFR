@@ -223,7 +223,7 @@ object TrainFR extends App with LazyLogging{
                 }
               // Attach a non-blocking timeout to the future
               val future =
-                FutureUtils.futureWithTimeout(f, 1.minute)
+                f//FutureUtils.futureWithTimeout(f, Duration.Inf)
 
               // Attach an onComplete call back to record in case there's an error or time out
               future onComplete {
