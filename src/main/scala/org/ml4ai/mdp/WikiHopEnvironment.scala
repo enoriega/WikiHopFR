@@ -20,6 +20,8 @@ import org.clulab.embeddings.word2vec.Word2Vec
 import org.json4s.JsonAST.{JArray, JDouble}
 import org.json4s.jackson.JsonMethods.{compact, render}
 
+import scala.io.Source
+
 class WikiHopEnvironment(val id:String, val start:String, val end:String, documentUniverse:Option[Set[String]] = None) extends Environment with LazyLogging {
 
   private implicit val loader:AnnotationsLoader = WikiHopEnvironment.annotationsLoader
@@ -108,19 +110,32 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
     * @param action taken
     * @return
     */
-  private def rewardSignal(action: Action, newState:KnowledgeGraph, fetchedPapers:Set[String], immediateRewardEnabled:Boolean = false):Double = {
+  private def rewardSignal(action: Action, oldState:Option[KnowledgeGraph], fetchedPapers:Set[String], immediateRewardEnabled:Boolean = false):Double = {
 
     val newPapers:Int = (fetchedPapers diff papersRead).size
-    val newRelations:Int =
-      (newState.edges diff
-        (knowledgeGraph match {
-          case Some(kg) => kg.edges
-          case None => Set.empty
-        })
-      ).size
+//    val newRelations:Int =
+//      (newState.edges diff
+//        (knowledgeGraph match {
+//          case Some(kg) => kg.edges
+//          case None => Set.empty
+//        })
+//      ).size
 
-    val successReward = WHConfig.Environment.successReward
-    val failureReward = WHConfig.Environment.failureReward
+    val newRelations:Int =
+      (knowledgeGraph.get.edges diff (oldState match { case Some(kg) => kg.edges; case None => Set.empty })).size
+
+//    val successReward = WHConfig.Environment.successReward
+//    val failureReward = WHConfig.Environment.failureReward
+    val successReward =
+      (if(WikiHopEnvironment.papersRequired.contains(id)) {
+          WikiHopEnvironment.papersRequired(id)
+        }
+        else {
+          logger.error(s"Key $id not found in papers required")
+          0
+      }) / papersRead.size.toDouble
+
+    val failureReward = -successReward
     val livingReward = WHConfig.Environment.livingReward
     val sigmoidFactor = successReward*0.5 // TODO Parameterize the ratio
 
@@ -197,18 +212,20 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
     lastConcreteAction = Some(finalAction)
     // Generate new KG from the documents
     val expandedDocuments = fetchedDocs union papersRead
-    val kg = buildKnowledgeGraph(expandedDocuments)
-    val reward = rewardSignal(action, kg, fetchedDocs, immediateRewardEnabled)
-
+    val oldState = knowledgeGraph
+    knowledgeGraph = Some(buildKnowledgeGraph(expandedDocuments))
     // Keep track of how many documents were added
     numDocumentsAdded = (fetchedDocs diff papersRead).size
 
     // Update the knowledge graph and keep track of the new papers
-    knowledgeGraph = Some(kg)
     papersRead ++= fetchedDocs
 
+    val reward = rewardSignal(action, oldState, fetchedDocs, immediateRewardEnabled)
+
+
+
     // Update the journal with the new entities
-    for(entity <- kg.entities){
+    for(entity <- knowledgeGraph.get.entities){
       entityIntroductionJournal.getOrElseUpdate(entity, iterationNum)
     }
 
@@ -305,7 +322,8 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
           case Some(kg) =>
             Try(kg.findPath(start, end)) match {
               case Success(v) =>
-                result = Some(v)
+                if(v.nonEmpty)
+                  result = Some(v)
                 v
               case Failure(e) =>
                 logger.error(s"$e - ${e.getMessage}")
@@ -428,6 +446,19 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
 object WikiHopEnvironment extends LazyLogging {
 
   implicit val httpClient:HttpClient = HttpClients.createDefault
+
+  val papersRequired:Map[String, Int] = {
+    import org.ml4ai.utils.using
+    using(Source.fromFile("min_docs.tsv")){
+      source =>
+        source.getLines().map{
+          line =>
+            val tokens = line.split("\t")
+            val (key, value) = (tokens.head, tokens.tail.size)
+            key -> value
+        }.toMap
+    }
+  }
 
   private def getInstance(data: Iterable[WikiHopInstance], key: String): WikiHopInstance =
     Try(data.filter(_.id == key)) match {

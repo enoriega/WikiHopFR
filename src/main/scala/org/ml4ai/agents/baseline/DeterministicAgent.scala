@@ -17,7 +17,7 @@ abstract class DeterministicAgent(implicit rng:Random) extends BaseAgent{
     */
   override def runEpisode(environment: WikiHopEnvironment, monitor:Option[AgentObserver]): Iterable[Seq[VerboseRelation]] = {
     // Call an inner function to keep this strictly tail-recursive
-    def helper(environment: WikiHopEnvironment, monitor: Option[AgentObserver]) = {
+    def helper(environment: WikiHopEnvironment, monitor: Option[AgentObserver]): Iterable[Seq[VerboseRelation]] = {
       try {
         // Base case in which the episode has finished and the outcome can be observed
         if (environment.finishedEpisode) {
@@ -41,7 +41,7 @@ abstract class DeterministicAgent(implicit rng:Random) extends BaseAgent{
           }
 
           // Tail recursion
-          runEpisode(environment, monitor)
+          helper(environment, monitor)
         }
       } catch {
         // If an error happened here, keep track of it
