@@ -429,7 +429,7 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
               candidate <- kg.entities
             } yield { Seq((lastA, candidate), (lastB, candidate))}
           case None =>
-            Seq((startTokens, endTokens))
+            Seq.empty
         }
 
 
