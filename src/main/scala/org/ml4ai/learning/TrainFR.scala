@@ -212,7 +212,7 @@ object TrainFR extends App with LazyLogging{
               val epsilonValue = epsilonIterator.next()
               val f =
                 Future {
-                  logger.info(s"Started ${instance.id}")
+                  logger.debug(s"Started ${instance.id}")
                   // Create a constant iterator with the current value of ε
                   val epsilonStream = Stream.continually(epsilonValue)
                   // Set up the body of the future
@@ -220,7 +220,7 @@ object TrainFR extends App with LazyLogging{
                   val agent = new PolicyAgent(policy)
                   val observer: AgentObserver = new TrainingAgentObserver(epsilonStream.iterator)
                   val outcome = agent.runEpisode(instance, Some(observer))
-                  logger.info(s"Finished ${instance.id}")
+                  logger.debug(s"Finished ${instance.id}")
                   (outcome, observer)
                 }
               // Attach a non-blocking timeout to the future

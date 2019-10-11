@@ -112,28 +112,42 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
     */
   private def rewardSignal(action: Action, oldState:Option[KnowledgeGraph], fetchedPapers:Set[String], immediateRewardEnabled:Boolean = false):Double = {
 
-    val newPapers:Int = (fetchedPapers diff papersRead).size
-//    val newRelations:Int =
-//      (newState.edges diff
-//        (knowledgeGraph match {
-//          case Some(kg) => kg.edges
-//          case None => Set.empty
-//        })
-//      ).size
+    val newPapers: Int = (fetchedPapers diff papersRead).size
+    //    val newRelations:Int =
+    //      (newState.edges diff
+    //        (knowledgeGraph match {
+    //          case Some(kg) => kg.edges
+    //          case None => Set.empty
+    //        })
+    //      ).size
 
-    val newRelations:Int =
-      (knowledgeGraph.get.edges diff (oldState match { case Some(kg) => kg.edges; case None => Set.empty })).size
+    val newRelations: Int =
+      knowledgeGraph match {
+        case Some(kg) =>
+          (kg.edges diff (oldState match {
+            case Some(kg) => kg.edges;
+            case None => Set.empty
+          })).size
+        case None =>
+          0
+      }
 
-//    val successReward = WHConfig.Environment.successReward
-//    val failureReward = WHConfig.Environment.failureReward
+
+    //    val successReward = WHConfig.Environment.successReward
+    //    val failureReward = WHConfig.Environment.failureReward
     val successReward =
-      ((if(WikiHopEnvironment.papersRequired.contains(id)) {
+      if (papersRead.nonEmpty) {
+        ((if (WikiHopEnvironment.papersRequired.contains(id)) {
           WikiHopEnvironment.papersRequired(id)
         }
         else {
           logger.error(s"Key $id not found in papers required")
           WHConfig.Environment.successReward
-      }) / papersRead.size.toDouble) * 100
+        }) / papersRead.size.toDouble) * 100
+      }
+      else
+       0.0
+
 
     val failureReward = -successReward
     val livingReward = WHConfig.Environment.livingReward
@@ -213,7 +227,8 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
     // Generate new KG from the documents
     val expandedDocuments = fetchedDocs union papersRead
     val oldState = knowledgeGraph
-    knowledgeGraph = Some(buildKnowledgeGraph(expandedDocuments))
+    if(expandedDocuments.nonEmpty)
+      knowledgeGraph = Some(buildKnowledgeGraph(expandedDocuments))
     // Keep track of how many documents were added
     numDocumentsAdded = (fetchedDocs diff papersRead).size
 
