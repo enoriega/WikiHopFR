@@ -423,10 +423,15 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
         val previouslyChosen = entitySelectionList.toSet
 
         // Get all the possible pairs to consider and discard the already chosen
-        val newPairs =
-          for{
-            candidate <- knowledgeGraph.get.entities
-          } yield { Seq((lastA, candidate), (lastB, candidate))}
+        val newPairs = knowledgeGraph match {
+          case Some(kg) =>
+            for{
+              candidate <- kg.entities
+            } yield { Seq((lastA, candidate), (lastB, candidate))}
+          case None =>
+            (startTokens, endTokens)
+        }
+
 
 
         val criteria = WHConfig.Environment.entitySelection.toLowerCase match {
