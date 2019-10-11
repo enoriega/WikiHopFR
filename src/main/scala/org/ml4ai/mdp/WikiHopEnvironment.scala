@@ -240,9 +240,14 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
 
 
     // Update the journal with the new entities
-    for(entity <- knowledgeGraph.get.entities){
-      entityIntroductionJournal.getOrElseUpdate(entity, iterationNum)
+    knowledgeGraph match {
+      case Some(kg) =>
+        for(entity <- kg.entities){
+          entityIntroductionJournal.getOrElseUpdate(entity, iterationNum)
+        }
+      case None => ()
     }
+
 
     reward
   }
