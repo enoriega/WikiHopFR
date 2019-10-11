@@ -29,6 +29,9 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
     this(wikiHopKey, WikiHopEnvironment.getTrainingInstance(wikiHopKey).query.split(" ").last, WikiHopEnvironment.getTrainingInstance(wikiHopKey).answer.get)
   }
 
+  def this(wikiHopKey:String, documentUniverse:Option[Set[String]]) {
+    this(wikiHopKey, WikiHopEnvironment.getTrainingInstance(wikiHopKey).query.split(" ").last, WikiHopEnvironment.getTrainingInstance(wikiHopKey).answer.get, documentUniverse)
+  }
 
   // Control values
   val maxIterations: Int = WHConfig.Environment.maxIterations
