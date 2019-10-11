@@ -198,10 +198,11 @@ object TrainFR extends App with LazyLogging{
   for(ep <- 1 to numEpisodes by targetUpdate) {
     logger.debug(s"Epoch $ep")
     // Take a slice of the instances
-    val instancesBatch = streamIterator take targetUpdate
+    val instancesBatch = streamIterator take targetUpdate toList
 
     // Let the cores do their work on the first slice of instances
-    val slices = instancesBatch.grouped(WHConfig.Training.maxThreads).toList
+//    val slices = instancesBatch.grouped(WHConfig.Training.maxThreads).toList
+    val slices = instancesBatch.grouped(instancesBatch.size).toList
 
     val futures =
       (for(slice <- slices) yield {
