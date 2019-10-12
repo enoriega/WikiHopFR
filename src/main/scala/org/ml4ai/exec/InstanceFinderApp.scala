@@ -26,13 +26,17 @@ object InstanceFinderApp extends App with LazyLogging{
     using(Source.fromFile("small_instances.txt")){
       s =>
         s.getLines().toSet
+    } ++
+    using(Source.fromFile("testing_instances.txt")){
+      s =>
+        s.getLines().toSet
     }
 
   val instances = allInstances filter {
     i =>
       // Insert criteria here
-      val size = i.supportDocs.size
-      !(names contains i.id) && size >= 10 && size <= 20
+      //val size = i.supportDocs.size
+      !(names contains i.id) //&& size >= 10 && size <= 20
   } take (10000)
 
   val totalInstances = instances.size
@@ -53,7 +57,13 @@ object InstanceFinderApp extends App with LazyLogging{
       // Return the instance id along with the outcomes
       val outcome = Try(agent.runEpisode(instance, monitor=Some(observer))) match {
         case Success(paths) if paths.nonEmpty =>
-          Some(instance.id)
+          observer.iterations match {
+            case Some(i) if i > 1 =>
+              logger.info(s"Found instance ${instance.id}")
+              Some(instance.id)
+            case _ => None
+          }
+
         case Failure(exception) =>
           logger.error(s"Error in ${instance.id} - ${exception.toString}: ${exception.getMessage}")
           None
@@ -74,16 +84,6 @@ object InstanceFinderApp extends App with LazyLogging{
           val instanceIds = os collect { case Some(id) => id}
           println("Matching instances:")
           instanceIds foreach println
-//        val stats = new BenchmarkStats(os)
-//
-//        logger.info(s"Success rate of ${stats.successRate}. Found a path on ${stats.numSuccesses} out of $totalInstances instances")
-//        logger.info(s"Iteration distribution: ${prettyPrintMap(stats.iterationNumDistribution)}")
-//        logger.info(s"Papers distribution: ${prettyPrintMap(stats.papersDistribution)}")
-//        logger.info(s"Action distribution: ${prettyPrintMap(stats.actionDistribution)}")
-//        logger.info(s"Concrete action distribution: ${prettyPrintMap(stats.concreteActionDist)}")
-//
-//        Serializer.save(stats, s"$jsonOutputPath.ser")
-//        stats.toJson(jsonOutputPath)
 
       case Failure(exception) =>
         logger.error(exception.toString)
