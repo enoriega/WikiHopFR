@@ -125,13 +125,12 @@ object TestFR extends App with LazyLogging{
   }
 
   // Let the cores do their work on the first slice of instances
-//  val slices = smallInstances.grouped(WHConfig.Testing.maxThreads)
+  val slices = smallInstances.grouped(WHConfig.Testing.maxThreads)
 
   val futures =
-//    (for(slice <- slices) yield {
-//      val sliceFutures =
-//        slice map {
-    smallInstances map {
+    (for(slice <- slices) yield {
+      val sliceFutures =
+        slice map {
           instance =>
             logger.info(s"Starting with ${instance.id}")
             // Dispatch the agent asynchronously
@@ -144,21 +143,23 @@ object TestFR extends App with LazyLogging{
                 (outcome, observer)
               }
             // Attach a non-blocking timeout to the future
-            val timedOutFuture = FutureUtils.futureWithTimeout(f, 1.minute)
+//            val timedOutFuture = FutureUtils.futureWithTimeout(f, 1.minute)
 
-            timedOutFuture onComplete {
+//            timedOutFuture onComplete {
+            f onComplete {
               case Failure(exception) =>
                 logger.error(s"Error on ${instance.id}: $exception")
               case _ =>
                 logger.info(s"Finished with ${instance.id}")
             }
-            timedOutFuture
+//            timedOutFuture
+            f
         } toSeq // This call toSeq is necessary to not consume the iterable after awaiting for the results
 
       // Block on the futures to collect the results and do back propagation
-//      Await.ready(Future.sequence(sliceFutures), Duration.Inf)
-//      sliceFutures
-//    }).toSeq//.flatten.toSeq
+      Await.ready(Future.sequence(sliceFutures), Duration.Inf)
+      sliceFutures
+    }).flatten.toSeq
 
 
   Await.ready(Future.sequence(futures), Duration.Inf)
