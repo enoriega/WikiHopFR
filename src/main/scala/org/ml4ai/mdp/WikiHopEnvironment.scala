@@ -105,6 +105,7 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
     RandomAction :: actions
   }
 
+  private val averagePapersReq:Int = WikiHopEnvironment.papersRequired.values.sum / WikiHopEnvironment.papersRequired.size
   /**
     * Computes the scalar reward of taking the current action
     * @param action taken
@@ -113,13 +114,6 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
   private def rewardSignal(action: Action, oldState:Option[KnowledgeGraph], fetchedPapers:Set[String], immediateRewardEnabled:Boolean = false):Double = {
 
     val newPapers: Int = (fetchedPapers diff papersRead).size
-    //    val newRelations:Int =
-    //      (newState.edges diff
-    //        (knowledgeGraph match {
-    //          case Some(kg) => kg.edges
-    //          case None => Set.empty
-    //        })
-    //      ).size
 
     val newRelations: Int =
       knowledgeGraph match {
@@ -133,23 +127,18 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
       }
 
 
-    //    val successReward = WHConfig.Environment.successReward
-    //    val failureReward = WHConfig.Environment.failureReward
     val successReward =
-      if (papersRead.nonEmpty) {
-        ((if (WikiHopEnvironment.papersRequired.contains(id)) {
-          WikiHopEnvironment.papersRequired(id)
-        }
-        else {
-          logger.error(s"Key $id not found in papers required")
-          WHConfig.Environment.successReward
-        }) / papersRead.size.toDouble) * 100
+      if (WikiHopEnvironment.papersRequired.contains(id)) {
+        WikiHopEnvironment.papersRequired(id) - 100
       }
-      else
-       0.0
+      else {
+        logger.error(s"Key $id not found in papers required")
+        averagePapersReq - 100
+      }
 
 
-    val failureReward = -successReward
+
+    val failureReward = -100
     val livingReward = WHConfig.Environment.livingReward
     val sigmoidFactor = successReward*0.5 // TODO Parameterize the ratio
 
@@ -158,7 +147,7 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
         if (outcome.nonEmpty)
           successReward
         else
-            failureReward
+          failureReward
       }
       else
         0
