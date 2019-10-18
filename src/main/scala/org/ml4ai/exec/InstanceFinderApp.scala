@@ -37,7 +37,7 @@ object InstanceFinderApp extends App with LazyLogging{
       // Insert criteria here
       //val size = i.supportDocs.size
       !(names contains i.id) //&& size >= 10 && size <= 20
-  } take (10000)
+  }
 
   val totalInstances = instances.size
   logger.info(s"About to run FocusedReading on $totalInstances instances")
