@@ -95,6 +95,7 @@ object WHConfig {
 
     val statsDump:String = f.getString("statsDump")
     val maxThreads:Int = f.getInt("maxThreads")
+    val instances:String = f.getString("instances")
   }
 
   object HttpClient {
@@ -109,5 +110,12 @@ object WHConfig {
     val modelName: String = f.getString("modelName")
     val statsDump:String = f.getString("statsDump")
     val maxThreads:Int = f.getInt("maxThreads")
+    val instances: String = f.getString("instances")
+    val exploreBias: Double = f.getDouble("exploreBias")
+  }
+
+  object Random {
+    private val f = config.getConfig("random")
+    val seed: Int = f.getInt("seed")
   }
 }

@@ -25,7 +25,7 @@ object TestFR extends App with LazyLogging{
 
   def selectSmall(instances: Seq[WikiHopInstance]):Iterable[WikiHopInstance] = {
     val names =
-      using(Source.fromFile("testing_instances.txt")){
+      using(Source.fromFile(WHConfig.Testing.instances)){
         s =>
           s.getLines().toSet
       }

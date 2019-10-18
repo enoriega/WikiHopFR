@@ -29,7 +29,7 @@ object TrainFR extends App with LazyLogging{
 
   def selectSmall(instances: Seq[WikiHopInstance]):Iterable[WikiHopInstance] = {
     val names =
-      using(Source.fromFile("small_instances.txt")){
+      using(Source.fromFile(WHConfig.Training.instances)){
         s =>
           s.getLines().toSet
       }
