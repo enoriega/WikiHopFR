@@ -19,6 +19,7 @@ import scala.util.{Failure, Success, Try}
 
 class DQN(initToZero:Boolean = false) extends Approximator(initToZero,"dqn")
 class LinearQN(initToZero:Boolean = false) extends Approximator(initToZero,"linear")
+class MLP(initToZero:Boolean = false) extends Approximator(initToZero,"mlp")
 
 abstract class Approximator(initToZero:Boolean, functionalForm:String) extends LazyLogging{
 
