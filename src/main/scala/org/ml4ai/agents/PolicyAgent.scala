@@ -16,7 +16,7 @@ class PolicyAgent(policy:EpGreedyPolicy)(implicit rng:Random) extends Determinis
     // for the specific case of the policy agent.
     val state = environment.observeState
     state.asInstanceOf[WikiHopState].candidateEntities match {
-      case Some(candidates) if candidates.nonEmpty =>
+      case Some(candidates) if candidates.size > 1 =>
         policy.selectAction(state)
       case _ =>
         RandomAction
