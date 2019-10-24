@@ -57,6 +57,7 @@ abstract class BaseAgent(implicit rnd:Random) {
 //        val relatedDocs = LuceneHelper.getLexicallySimilarDocuments(source.split(" ").toSet, destination.split(" ").toSet)
 //        Some(localDocs union relatedDocs.take(200).toSet)
         Some(SupportDocs.relatedDocs(instance))
+      case "AllDocs" => None
       case unsupported =>
         throw new UnsupportedOperationException(s"Document universe of $unsupported kind is not supported")
 

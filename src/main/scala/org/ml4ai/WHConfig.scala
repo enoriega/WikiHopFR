@@ -56,6 +56,7 @@ object WHConfig {
     val immediateRewardEnabled: Boolean = f.getBoolean("immediateRewardEnabled")
     val entitySelection: String = f.getString("entitySelection")
     val excludeExplorationSingle: Boolean = f.getBoolean("excludeExplorationSingle")
+    val maxPapersFetched: Int = f.getInt("maxPapersFetched")
   }
 
   object Benchmark {

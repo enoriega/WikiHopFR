@@ -27,7 +27,7 @@ object LuceneHelper extends LazyLogging {
   private val index = new NIOFSDirectory(indexDir.toPath)
   private val reader = DirectoryReader.open(index)
   private val defaultSearcher = new IndexSearcher(reader)
-  private val maxResults = 10 //reader.numDocs // Make the upper bound be the number of documents in the index
+  private val maxResults = if(WHConfig.Environment.maxPapersFetched > 0) WHConfig.Environment.maxPapersFetched else reader.numDocs // Make the upper bound be the number of documents in the index
 
 
   lazy val analyzer = new StandardAnalyzer()
