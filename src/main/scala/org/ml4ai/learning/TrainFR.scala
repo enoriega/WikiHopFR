@@ -107,7 +107,7 @@ object TrainFR extends App with LazyLogging{
     */
   def computeStats(stats: Seq[EpisodeStats]):(Map[Int, Int], Map[Int, Int]) = {
     val (iterations, papersRead) =
-      (stats map {
+      (stats withFilter (_.success) map {
         s =>
           (s.iterations, s.papersRead)
       }).unzip
