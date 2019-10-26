@@ -129,16 +129,16 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
 
     val successReward =
       if (WikiHopEnvironment.papersRequired.contains(id)) {
-        WikiHopEnvironment.papersRequired(id) - 100
+        WikiHopEnvironment.papersRequired(id) - papersRead.size
       }
       else {
         logger.error(s"Key $id not found in papers required")
-        averagePapersReq - 100
+        averagePapersReq - papersRead.size
       }
 
 
 
-    val failureReward = -100
+    val failureReward = - papersRead.size
     val livingReward = WHConfig.Environment.livingReward
     val sigmoidFactor = successReward*0.5 // TODO Parameterize the ratio
 
