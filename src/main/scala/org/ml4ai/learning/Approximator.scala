@@ -1,21 +1,15 @@
 package org.ml4ai.learning
 
 import com.typesafe.scalalogging.LazyLogging
-import org.apache.http.client.methods.{HttpGet, HttpPost, HttpPut}
-import org.apache.http.entity.{ContentType, StringEntity}
-import org.ml4ai.mdp.{Exploitation, Exploration, ExplorationDouble, WikiHopState}
-import org.sarsamora.actions.Action
-import org.sarsamora.states.State
+import org.apache.http.client.methods.{HttpGet, HttpPost}
+import org.apache.http.impl.client.{CloseableHttpClient, HttpClients}
 import org.json4s.JsonDSL._
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
-import org.apache.http.impl.client.{CloseableHttpClient, HttpClients}
 import org.ml4ai.WHConfig
-import org.ml4ai.utils.HttpUtils.endpoint
+import org.ml4ai.mdp.{Exploitation, Exploration, ExplorationDouble, WikiHopState}
 import org.ml4ai.utils._
-
-import scala.io.Source
-import scala.util.{Failure, Success, Try}
+import org.sarsamora.actions.Action
 
 class DQN(initToZero:Boolean = false) extends Approximator(initToZero,"dqn")
 class LinearQN(initToZero:Boolean = false) extends Approximator(initToZero,"linear")

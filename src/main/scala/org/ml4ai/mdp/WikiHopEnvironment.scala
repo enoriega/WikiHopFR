@@ -1,26 +1,22 @@
 package org.ml4ai.mdp
 
 import com.typesafe.scalalogging.LazyLogging
-import org.ml4ai.{WHConfig, WikiHopInstance}
-import org.ml4ai.inference._
-import org.ml4ai.ir.LuceneHelper
-import org.ml4ai.utils.{AnnotationsLoader, HttpUtils, WikiHopParser, buildRandom, sigmoid}
-import org.sarsamora.actions.Action
-import org.sarsamora.environment.Environment
-import org.sarsamora.states.State
-import org.json4s.native.JsonMethods._
-
-import scala.collection.mutable
-import scala.util.{Failure, Success, Try}
-import WikiHopEnvironment.buildKnowledgeGraph
 import org.apache.http.client.HttpClient
 import org.apache.http.impl.client.HttpClients
-import org.clulab.embeddings.word2vec
-import org.clulab.embeddings.word2vec.Word2Vec
 import org.json4s.JsonAST.{JArray, JDouble}
 import org.json4s.jackson.JsonMethods.{compact, render}
+import org.json4s.native.JsonMethods._
+import org.ml4ai.inference._
+import org.ml4ai.ir.LuceneHelper
+import org.ml4ai.mdp.WikiHopEnvironment.buildKnowledgeGraph
+import org.ml4ai.utils.{AnnotationsLoader, HttpUtils, WikiHopParser, buildRandom, sigmoid}
+import org.ml4ai.{WHConfig, WikiHopInstance}
+import org.sarsamora.actions.Action
+import org.sarsamora.environment.Environment
 
+import scala.collection.mutable
 import scala.io.Source
+import scala.util.{Failure, Success, Try}
 
 class WikiHopEnvironment(val id:String, val start:String, val end:String, documentUniverse:Option[Set[String]] = None) extends Environment with LazyLogging {
 
@@ -133,7 +129,7 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
       }
       else {
         logger.error(s"Key $id not found in papers required")
-        averagePapersReq - papersRead.size
+        Seq(averagePapersReq - papersRead.size, -1).min
       }
 
 
@@ -365,8 +361,8 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
   }
 
   private def distance(pairs:Seq[(Set[String], Set[String])]):Seq[Float] = {
-    import org.json4s.JsonDSL._
     import WikiHopEnvironment.httpClient
+    import org.json4s.JsonDSL._
 
     val payload =
       compact {
