@@ -125,7 +125,10 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
 
     val successReward =
       if (WikiHopEnvironment.papersRequired.contains(id)) {
-        WikiHopEnvironment.papersRequired(id) - papersRead.size
+        Seq(
+          WikiHopEnvironment.papersRequired(id) - papersRead.size,
+          -1
+        ).min
       }
       else {
         logger.error(s"Key $id not found in papers required")
