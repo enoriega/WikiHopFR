@@ -105,19 +105,21 @@ object TrainFR extends App with LazyLogging{
     * @param stats Sequence of EpisodeStats instances
     * @return
     */
-  def computeStats(stats: Seq[EpisodeStats]):(Map[Int, Int], Map[Int, Int]) = {
-    val (iterations, papersRead) =
+  def computeStats(stats: Seq[EpisodeStats]):(Map[Int, Int], Map[Int, Int], Map[Int, Int]) = {
+    val (iterations, papersRead, numEntities) =
       (stats withFilter (_.success) map {
         s =>
-          (s.iterations, s.papersRead)
-      }).unzip
+          (s.iterations, s.papersRead, s.numEntities)
+      }).unzip3
 
     val iterationsDist =
       iterations.groupBy(identity).mapValues(_.size)
     val papersDist =
       papersRead.groupBy(identity).mapValues(_.size)
+    val numEntitiesDist =
+      numEntities.groupBy(identity).mapValues(_.size)
 
-    (iterationsDist, papersDist)
+    (iterationsDist, papersDist, numEntitiesDist)
   }
 
 
@@ -271,9 +273,10 @@ object TrainFR extends App with LazyLogging{
     logger.info(s"Current episode: $ep out of $numEpisodes")
     logger.info(s"Current ε = ${epsilonDecay.next()}")
     logger.info(s"Success rate of $successRate for the last $targetUpdate episodes")
-    val (iterationDist, documentDist) = computeStats(stats)
+    val (iterationDist, documentDist, numEntitiesDist) = computeStats(stats)
     logger.info(s"Iterations:\n${prettyPrintMap(iterationDist)}")
     logger.info(s"Papers read:\n${prettyPrintMap(documentDist)}")
+//    logger.info(s"Num entities:\n${numEntitiesDist.keySet}")
     FileUtils.writeLines(statsDump, stats.map(_.toString).asJava, true)
     updateParameters(network)
     val checkpointName = s"${ep}_$checkpointSuffix"

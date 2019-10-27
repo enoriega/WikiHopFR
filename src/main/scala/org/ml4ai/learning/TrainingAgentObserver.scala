@@ -48,7 +48,7 @@ class TrainingAgentObserver(epsilons:Iterator[Double]) extends AgentObserver wit
 
     val (epsilons, rewards, actions) = actionLog.unzip3
 
-    stats += EpisodeStats(id, numIterations, papersRead, success, epsilons, rewards, actions)
+    stats += EpisodeStats(id, numIterations, papersRead, success, epsilons, rewards, actions, env.entities.size)
     actionLog.clear()
   }
 
