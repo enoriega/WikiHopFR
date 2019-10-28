@@ -28,6 +28,7 @@ object LuceneHelper extends LazyLogging {
   private val reader = DirectoryReader.open(index)
   private val defaultSearcher = new IndexSearcher(reader)
   private val maxResults = if(WHConfig.Environment.maxPapersFetched > 0) WHConfig.Environment.maxPapersFetched else reader.numDocs // Make the upper bound be the number of documents in the index
+  private val scoresCache = new mutable.HashMap[Action, Float]()
 
 
   lazy val analyzer = new StandardAnalyzer()
@@ -55,19 +56,7 @@ object LuceneHelper extends LazyLogging {
 
   // Do the actual IR
   def retrieveDocumentNames(action: Action, instanceToFilter:Option[Set[String]] = None, searcher:IndexSearcher = defaultSearcher):Set[String] = {
-    // Handle the cascade action
-//    action match {
-//      case Cascade(a, b) =>
-//        val exploit = Exploitation(a, b)
-//        val fetched = retrieveDocumentNames(exploit, instanceToFilter, searcher)
-//        if(fetched.nonEmpty)
-//          fetched
-//        else {
-//          val explore = ExplorationDouble(a, b)
-//          retrieveDocumentNames(explore, instanceToFilter, searcher)
-//        }
-//
-//      case _=>
+
         // Build the query
         val query = actionToQuery(action)
 
@@ -87,7 +76,26 @@ object LuceneHelper extends LazyLogging {
           case None =>
             result
         }
-//    }
+  }
+
+  /**
+    * Computes the average score from the lucene index. Uses a cache for efficiency
+    */
+  def scoreAction(action: Action, instanceToFilter:Option[Set[String]] = None, searcher:IndexSearcher = defaultSearcher):Float = {
+    //scoresCache.getOrElseUpdate(action,
+    //  {
+          // Build the query
+          val query = actionToQuery(action)
+
+          // Execute the query
+          val hits = searcher.search(query, maxResults).scoreDocs
+
+          if(hits.isEmpty)
+            0.0f
+          else
+            ((hits map (_.score)).sum / hits.size).toFloat
+
+    //  })
   }
 
   /**

@@ -363,6 +363,12 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
       this.knowledgeGraph = Some(buildKnowledgeGraph(docs))
   }
 
+  ///////////////////// Entity ranking criteria
+  /**
+    * Returns the euclidian distance of the pair of entities in the embeddings' vector space
+    * @param pairs
+    * @return
+    */
   private def distance(pairs:Seq[(Set[String], Set[String])]):Seq[Float] = {
     import WikiHopEnvironment.httpClient
     import org.json4s.JsonDSL._
@@ -386,7 +392,12 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
     ret
   }
 
-  private def combinedRank(pairs:Seq[(Set[String], Set[String])]):Seq[Float] = {
+  /**
+    * Returns the added degree of the entities in the knowledge graph
+    * @param pairs
+    * @return
+    */
+  private def combineDegree(pairs:Seq[(Set[String], Set[String])]):Seq[Float] = {
     pairs map {
       case (ea, eb) =>
         this.knowledgeGraph match {
@@ -396,6 +407,23 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
         }
     }
   }
+
+  /**
+    * Returns the average lucene score for an exploit action of the pair of entities
+    * @param pairs
+    * @return
+    */
+  private def luceneScore(pairs:Seq[(Set[String], Set[String])]):Seq[Float] = {
+    // For each pair, get the average lucene score of its Exploit action as a proxy for their relevance
+    pairs map {
+      case (ea, eb) =>
+        // Build the action
+        val act = Exploitation(ea, eb)
+        // Score the action as the average lucene score for its results
+        LuceneHelper.scoreAction(act).toFloat
+    }
+  }
+  ////////////////////////////////////////////////////////////////////////////////////////////////////
 
   /**
     * @return top entities to be considered as target of an action
@@ -411,11 +439,22 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
         val previouslyChosen = entitySelectionList.toSet
 
         // Get all the possible pairs to consider and discard the already chosen
+//        val newPairs = knowledgeGraph match {
+//          case Some(kg) =>
+//            for{
+//              candidate <- kg.entities
+//            } yield { Seq((lastA, candidate), (lastB, candidate))}
+//          case None =>
+//            Seq.empty
+//        }
+
         val newPairs = knowledgeGraph match {
           case Some(kg) =>
             for{
-              candidate <- kg.entities
-            } yield { Seq((lastA, candidate), (lastB, candidate))}
+              a <- kg.entities
+              b <- kg.entities
+              if a != b
+            } yield { Seq((a, b)) }
           case None =>
             Seq.empty
         }
@@ -424,7 +463,8 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
 
         val criteria = WHConfig.Environment.entitySelection.toLowerCase match {
           case "distance" => distance _
-          case "rank" => combinedRank _
+          case "rank" => combineDegree _
+          case "lucene" => luceneScore _
           case t =>
             val message = s"Unimplemented entity selection criteria: $t"
             logger.error(message)
