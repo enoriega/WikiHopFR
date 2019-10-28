@@ -82,8 +82,8 @@ object LuceneHelper extends LazyLogging {
     * Computes the average score from the lucene index. Uses a cache for efficiency
     */
   def scoreAction(action: Action, instanceToFilter:Option[Set[String]] = None, searcher:IndexSearcher = defaultSearcher):Float = {
-    scoresCache.getOrElseUpdate(action,
-      {
+//    scoresCache.getOrElseUpdate(action,
+//      {
           // Build the query
           val query = actionToQuery(action)
 
@@ -95,7 +95,7 @@ object LuceneHelper extends LazyLogging {
           else
             ((hits map (_.score)).sum / hits.size).toFloat
 
-      })
+//      })
   }
 
   /**

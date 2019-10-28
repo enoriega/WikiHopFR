@@ -173,6 +173,8 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
   var entitySelectionList:List[(Set[String], Set[String])] = Nil
 
   override def execute(action: Action, persist: Boolean): Double = {
+    // Clear the previously observed state
+    cachedObservation = None
     // Increment the iteration counter
     iterationNum += 1
     // If the random action is selected, transform it to a concrete action randomly
@@ -251,51 +253,57 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
   // Computes safely how many times an entity has been subject of an action
   private def timesUsed(entity:Set[String]):Int = entityUsageJournal.getOrElse(entity, 0)
 
+  private var cachedObservation:Option[WikiHopState] = None
+  def observeState:WikiHopState = cachedObservation match {
+    case None =>
+      val (numNodes, numEdges) = knowledgeGraph match {
+        case Some(kg) =>
+          (kg.entities.size, kg.edges.size)
+        case None =>
+          (0, 0)
+      }
 
-  def observeState:WikiHopState = {
-    val (numNodes, numEdges) = knowledgeGraph match {
-      case Some(kg) =>
-        (kg.entities.size, kg.edges.size)
-      case None =>
-        (0, 0)
-    }
+      val tEntities = topEntities
+      val iterationsOfIntroduction = tEntities map entityIntroductionJournal
+      val ranks = tEntities map {
+        entity =>
+          knowledgeGraph match {
+            case Some(kg) => kg.degrees(entity)
+            case None => 0
+          }
+      }
+      val entityUsage = tEntities map timesUsed
 
-    val tEntities = topEntities
-    val iterationsOfIntroduction = tEntities map entityIntroductionJournal
-    val ranks = tEntities map {
-      entity =>
-        knowledgeGraph match {
-          case Some(kg) => kg.degrees(entity)
-          case None => 0
-        }
-    }
-    val entityUsage = tEntities map timesUsed
+      val entityPairs =
+        for{
+          ea <- tEntities
+          eb <- tEntities
+          if ea != eb
+        } yield Set(ea, eb)
 
-    val entityPairs =
-      for{
-        ea <- tEntities
-        eb <- tEntities
-        if ea != eb
-      } yield Set(ea, eb)
+      // TODO clean this up
+      val pairwiseComponents =
+        entityPairs.toSet.map{
+          pair:Set[Set[String]] =>
+            val (ea, eb) = (pair.head, pair.tail.head)
+            val key = (ea, eb)
+            val value =
+              knowledgeGraph match {
+                case Some(kg) =>
+                  kg.shareConnectedComponent(ea, eb)
+                case None => false
+              }
 
-    // TODO clean this up
-    val pairwiseComponents =
-      entityPairs.toSet.map{
-        pair:Set[Set[String]] =>
-          val (ea, eb) = (pair.head, pair.tail.head)
-          val key = (ea, eb)
-          val value =
-            knowledgeGraph match {
-              case Some(kg) =>
-                kg.shareConnectedComponent(ea, eb)
-              case None => false
-            }
+            key -> value
+        }.toMap
 
-          key -> value
-      }.toMap
+      val ret =
+        WikiHopState(iterationNum, numNodes, numEdges, startTokens, endTokens,
+          Some(tEntities), iterationsOfIntroduction, ranks, entityUsage, pairwiseComponents)
 
-    WikiHopState(iterationNum, numNodes, numEdges, startTokens, endTokens,
-      Some(tEntities), iterationsOfIntroduction, ranks, entityUsage, pairwiseComponents)
+      cachedObservation = Some(ret)
+      ret
+    case Some(obs) => obs
   }
 
   override def finishedEpisode: Boolean = {
@@ -439,25 +447,25 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
         val previouslyChosen = entitySelectionList.toSet
 
         // Get all the possible pairs to consider and discard the already chosen
-//        val newPairs = knowledgeGraph match {
-//          case Some(kg) =>
-//            for{
-//              candidate <- kg.entities
-//            } yield { Seq((lastA, candidate), (lastB, candidate))}
-//          case None =>
-//            Seq.empty
-//        }
-
         val newPairs = knowledgeGraph match {
           case Some(kg) =>
             for{
-              a <- kg.entities
-              b <- kg.entities
-              if a != b
-            } yield { Seq((a, b)) }
+              candidate <- kg.entities
+            } yield { Seq((lastA, candidate), (lastB, candidate))}
           case None =>
             Seq.empty
         }
+
+//        val newPairs = knowledgeGraph match {
+//          case Some(kg) =>
+//            for{
+//              a <- kg.entities
+//              b <- kg.entities
+//              if a != b
+//            } yield { Seq((a, b)) }
+//          case None =>
+//            Seq.empty
+//        }
 
 
 
