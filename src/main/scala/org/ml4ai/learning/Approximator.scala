@@ -11,6 +11,8 @@ import org.ml4ai.mdp.{Exploitation, Exploration, ExplorationDouble, WikiHopState
 import org.ml4ai.utils._
 import org.sarsamora.actions.Action
 
+import scala.language.implicitConversions
+
 class DQN(initToZero:Boolean = false) extends Approximator(initToZero,"dqn")
 class LinearQN(initToZero:Boolean = false) extends Approximator(initToZero,"linear")
 class MLP(initToZero:Boolean = false) extends Approximator(initToZero,"mlp")
@@ -61,7 +63,7 @@ abstract class Approximator(initToZero:Boolean, functionalForm:String) extends L
 
   def load(modelName:String): Unit = {
     val endpoint = WHConfig.HttpClient.server
-    val request = new HttpPost(s"$endpoint/load?name=$modelName")
+    val request = new HttpPost(s"$endpoint/load?approximator=$functionalForm&name=$modelName")
     val _ = httpClient.execute(request)
   }
 }
