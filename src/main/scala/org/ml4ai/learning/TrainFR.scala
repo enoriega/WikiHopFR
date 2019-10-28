@@ -258,7 +258,6 @@ object TrainFR extends App with LazyLogging{
       }).unzip
 
     // Aggregate the results
-//    val successes = outcomes count (_.nonEmpty)
     // Aggregate observers' data
     val (partialMemories, partialStats) = observers map {
       case o:TrainingAgentObserver => (o.memory, o.stats)
