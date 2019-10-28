@@ -105,9 +105,9 @@ object TrainFR extends App with LazyLogging{
     * @param stats Sequence of EpisodeStats instances
     * @return
     */
-  def computeStats(stats: Seq[EpisodeStats]):(Map[Int, Int], Map[Int, Int], Map[Int, Int]) = {
+  def computeStats(stats: Seq[EpisodeStats], successCases:Boolean):(Map[Int, Int], Map[Int, Int], Map[Int, Int]) = {
     val (iterations, papersRead, numEntities) =
-      (stats withFilter (_.success) map {
+      (stats withFilter (c => if(successCases) c.success else !c.success) map {
         s =>
           (s.iterations, s.papersRead, s.numEntities)
       }).unzip3
@@ -247,7 +247,7 @@ object TrainFR extends App with LazyLogging{
         Await.ready(Future.sequence(sliceFutures), Duration.Inf)
 
         sliceFutures
-      }).flatten.toSeq
+      }).flatten
 
 
 
@@ -258,7 +258,7 @@ object TrainFR extends App with LazyLogging{
       }).unzip
 
     // Aggregate the results
-    val successes = outcomes count (_.nonEmpty)
+//    val successes = outcomes count (_.nonEmpty)
     // Aggregate observers' data
     val (partialMemories, partialStats) = observers map {
       case o:TrainingAgentObserver => (o.memory, o.stats)
@@ -269,17 +269,22 @@ object TrainFR extends App with LazyLogging{
     memory remember partialMemories.flatten
 
     // Do a back propagation step and send info to the log
-    val successRate = successes / targetUpdate.toFloat
+//    val successRate = successes / targetUpdate.toFloat
+    val successRate = stats.count(_.success) / stats.size.toFloat
+    val avgPapers = stats.map(_.papersRead).sum / stats.size.toFloat
     logger.info(s"Current episode: $ep out of $numEpisodes")
     logger.info(s"Current ε = ${epsilonDecay.next()}")
-    logger.info(s"Success rate of $successRate for the last $targetUpdate episodes")
-    val (iterationDist, documentDist, numEntitiesDist) = computeStats(stats)
-    logger.info(s"Iterations:\n${prettyPrintMap(iterationDist)}")
-    logger.info(s"Papers read:\n${prettyPrintMap(documentDist)}")
-//    logger.info(s"Num entities:\n${numEntitiesDist.keySet}")
+    logger.info(s"Success rate of $successRate Avg papers read $avgPapers for the last $targetUpdate episodes")
+    val (successesIterationDist, successesDocumentDist, successesNumEntitiesDist) = computeStats(stats, successCases = true)
+    val (failuresIterationDist, failuresDocumentDist, failuresNumEntitiesDist) = computeStats(stats, successCases = false)
+    logger.info(s"Success cases # Iterations:\n${prettyPrintMap(successesIterationDist)}")
+    logger.info(s"Failure cases # Iterations:\n${prettyPrintMap(failuresIterationDist)}")
+
+//    logger.info(s"Papers read:\n${prettyPrintMap(documentDist)}")
+
     FileUtils.writeLines(statsDump, stats.map(_.toString).asJava, true)
     updateParameters(network)
-    val checkpointName = s"${ep}_$checkpointSuffix"
+    val checkpointName = s"${ep/targetUpdate}_$checkpointSuffix"
     logger.info(s"Saving checkpoint as $checkpointName")
     network.save(checkpointName)
   }
