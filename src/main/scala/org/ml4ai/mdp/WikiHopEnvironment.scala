@@ -374,8 +374,6 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
   ///////////////////// Entity ranking criteria
   /**
     * Returns the euclidian distance of the pair of entities in the embeddings' vector space
-    * @param pairs
-    * @return
     */
   private def distance(pairs:Seq[(Set[String], Set[String])]):Seq[Float] = {
     import WikiHopEnvironment.httpClient
@@ -402,8 +400,6 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
 
   /**
     * Returns the added degree of the entities in the knowledge graph
-    * @param pairs
-    * @return
     */
   private def combineDegree(pairs:Seq[(Set[String], Set[String])]):Seq[Float] = {
     pairs map {
@@ -418,8 +414,6 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
 
   /**
     * Returns the average lucene score for an exploit action of the pair of entities
-    * @param pairs
-    * @return
     */
   private def luceneScore(pairs:Seq[(Set[String], Set[String])]):Seq[Float] = {
     // For each pair, get the average lucene score of its Exploit action as a proxy for their relevance
@@ -428,7 +422,7 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
         // Build the action
         val act = Exploitation(ea, eb)
         // Score the action as the average lucene score for its results
-        LuceneHelper.scoreAction(act).toFloat
+        LuceneHelper.scoreAction(act)
     }
   }
   ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -451,23 +445,10 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
           case Some(kg) =>
             for{
               candidate <- kg.entities
-            } yield { Seq((lastA, candidate), (lastB, candidate))}
+            } yield { Seq((lastA, candidate), (lastB, candidate), (startTokens, candidate), (endTokens, candidate))}
           case None =>
             Seq.empty
         }
-
-//        val newPairs = knowledgeGraph match {
-//          case Some(kg) =>
-//            for{
-//              a <- kg.entities
-//              b <- kg.entities
-//              if a != b
-//            } yield { Seq((a, b)) }
-//          case None =>
-//            Seq.empty
-//        }
-
-
 
         val criteria = WHConfig.Environment.entitySelection.toLowerCase match {
           case "distance" => distance _
@@ -497,7 +478,7 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
         val scores = criteria(pairsToTest)
 
         // Take the top N entities by their distance
-        (pairsToTest zip scores).sortBy(_._2).take(WHConfig.Environment.topEntitiesNum).map(_._1._2)
+        (pairsToTest zip scores).sortBy(_._2).map(_._1._2).distinct.take(WHConfig.Environment.topEntitiesNum)
 
     }
   }
@@ -515,7 +496,7 @@ object WikiHopEnvironment extends LazyLogging {
         source.getLines().map{
           line =>
             val tokens = line.split("\t")
-            val (key, value) = (tokens.head, tokens.tail.size)
+            val (key, value) = (tokens.head, tokens.tail.length)
             key -> value
         }.toMap
     }
