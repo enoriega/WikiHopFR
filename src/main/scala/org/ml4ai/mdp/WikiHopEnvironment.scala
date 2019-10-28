@@ -123,21 +123,25 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
       }
 
 
-    val successReward =
-      if (WikiHopEnvironment.papersRequired.contains(id)) {
-        Seq(
-          WikiHopEnvironment.papersRequired(id) - papersRead.size,
-          -1
-        ).min
-      }
-      else {
-        logger.error(s"Key $id not found in papers required")
-        Seq(averagePapersReq - papersRead.size, -1).min
-      }
+//    val successReward =
+//      if (WikiHopEnvironment.papersRequired.contains(id)) {
+//        Seq(
+//          WikiHopEnvironment.papersRequired(id) - papersRead.size,
+//          -1
+//        ).min
+//      }
+//      else {
+//        logger.error(s"Key $id not found in papers required")
+//        Seq(averagePapersReq - papersRead.size, -1).min
+//      }
+//
+//
+//
+//    val failureReward = - papersRead.size
 
+    val successReward = WHConfig.Environment.successReward
+    val failureReward = WHConfig.Environment.failureReward
 
-
-    val failureReward = - papersRead.size
     val livingReward = WHConfig.Environment.livingReward
     val sigmoidFactor = successReward*0.5 // TODO Parameterize the ratio
 
