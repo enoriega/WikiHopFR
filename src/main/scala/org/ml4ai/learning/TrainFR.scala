@@ -47,7 +47,7 @@ object TrainFR extends App with LazyLogging{
     */
   def updateParameters(network:Approximator)(implicit rng:Random):Unit = {
     // Sample a mini batch
-    val miniBatch = memory.sample(1000)
+    val miniBatch = memory.sample(10000)
 
     val payload =
       compact {
@@ -283,7 +283,7 @@ object TrainFR extends App with LazyLogging{
 
     FileUtils.writeLines(statsDump, stats.map(_.toString).asJava, true)
     updateParameters(network)
-    val checkpointName = s"${ep/targetUpdate}_$checkpointSuffix"
+    val checkpointName = s"${(ep/targetUpdate)+1}_$checkpointSuffix"
     logger.info(s"Saving checkpoint as $checkpointName")
     network.save(checkpointName)
   }
