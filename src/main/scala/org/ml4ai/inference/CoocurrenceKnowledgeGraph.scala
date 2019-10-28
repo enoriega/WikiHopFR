@@ -31,11 +31,16 @@ class CoocurrenceKnowledgeGraph(documents:Iterable[(String,Document)]) extends N
         // Compute the entity hashes
         val entityHashes = es map (e => groupedEntityHashes(filterUselessLemmas(e.lemmas.get).toSet))
         // Get all the pairs of entity hashes and compute their attribution
-        (for{
-          a <- entityHashes
-          b <- entityHashes
-          if a != b && a != 0 && b != 0
-        } yield (a, b, AttributingElement(None, sIx, hash))).toSet
+        val unfiltered =
+          (for{
+            a <- entityHashes
+            b <- entityHashes
+            if a != b && a != 0 && b != 0
+          } yield (a, b, AttributingElement(None, sIx, hash))).toSet
+        // Filter to only those that have more than one appearance
+        unfiltered.groupBy( a => (a._1, a._2) ).withFilter{
+          case (key, vals) => vals.size > 1
+        }.map{case (_, vals) => vals.head}
     }
 
   }
