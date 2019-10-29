@@ -54,6 +54,53 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
 
 
 
+//  override def possibleActions: Seq[Action] = {
+//    // Generate the possible actions to be taken given the current state of the environment
+//    val actions =
+//      knowledgeGraph match {
+//        // If this is the first call and there isn't a KG yet, generate the actions given those two nodes
+//        case None =>
+//          (if(!WHConfig.Environment.excludeExplorationSingle)
+//            List(Exploration(endTokens), Exploration(startTokens))
+//          else
+//            Nil) :::
+//          List(
+//            ExplorationDouble(startTokens, endTokens),
+//            Exploitation(startTokens, endTokens)
+//          )
+//        // Otherwise, procedurally generate the list of actions
+//        case Some(kg) =>
+//          val currentEntities = kg.entities
+//
+//          val ret = new mutable.ListBuffer[Action]
+//
+//          currentEntities foreach {
+//            e =>
+//
+//              if(!WHConfig.Environment.excludeExplorationSingle) {
+//                if (explorationEligible(e))
+//                  ret += Exploration(e)
+//              }
+//
+//              if(exploitationEligible(e))
+//                ret += Exploitation(e, end.split(" ").toSet)
+//
+//              for(i <- currentEntities if i != e && explorationEligible(i)){
+//                ret += ExplorationDouble(e, i)
+//              }
+//          }
+//
+//          ret.toList
+//      }
+//
+//
+//    if(actions.isEmpty)
+//      throw new ActionStarvationException
+//
+//    // Prepend the random action to the list of candidate actions
+//    RandomAction :: actions
+//  }
+
   override def possibleActions: Seq[Action] = {
     // Generate the possible actions to be taken given the current state of the environment
     val actions =
@@ -64,31 +111,42 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
             List(Exploration(endTokens), Exploration(startTokens))
           else
             Nil) :::
-          List(
-            ExplorationDouble(startTokens, endTokens),
-            Exploitation(startTokens, endTokens)
-          )
+            List(
+              ExplorationDouble(startTokens, endTokens),
+              Exploitation(startTokens, endTokens)
+            )
         // Otherwise, procedurally generate the list of actions
         case Some(kg) =>
-          val currentEntities = kg.entities
+          val currentEntities = this.topEntities
 
           val ret = new mutable.ListBuffer[Action]
 
-          currentEntities foreach {
-            e =>
-
-              if(!WHConfig.Environment.excludeExplorationSingle) {
-                if (explorationEligible(e))
-                  ret += Exploration(e)
-              }
-
-              if(exploitationEligible(e))
-                ret += Exploitation(e, end.split(" ").toSet)
-
-              for(i <- currentEntities if i != e && explorationEligible(i)){
-                ret += ExplorationDouble(e, i)
-              }
+          for{
+            ea <- currentEntities
+            eb <- currentEntities
+            if ea != eb
+          } {
+            ret += ExplorationDouble(ea, eb)
+            ret += Exploitation(ea, eb)
           }
+
+
+//
+//          currentEntities foreach {
+//            e =>
+//
+////              if(!WHConfig.Environment.excludeExplorationSingle) {
+////                if (explorationEligible(e))
+////                  ret += Exploration(e)
+////              }
+////
+////              if(exploitationEligible(e))
+//                ret += Exploitation(e, end.split(" ").toSet)
+//
+////              for(i <- currentEntities if i != e && explorationEligible(i)){
+//                ret += ExplorationDouble(e, i)
+////              }
+//          }
 
           ret.toList
       }
