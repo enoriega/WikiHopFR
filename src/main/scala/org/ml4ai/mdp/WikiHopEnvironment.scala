@@ -361,7 +361,7 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
 
       val ret =
         WikiHopState(iterationNum, numNodes, numEdges, startTokens, endTokens,
-          Some(tEntities), iterationsOfIntroduction, ranks, entityUsage, pairwiseComponents)
+          Some(tEntities), iterationsOfIntroduction, ranks, entityUsage, pairwiseComponents, if(finishedEpisode) outcome.nonEmpty else false)
 
       cachedObservation = Some(ret)
       ret

@@ -12,13 +12,16 @@ case class WikiHopState(iterationNum:Int,
                         iterationsOfIntroduction:Seq[Int],
                         ranks:Seq[Int],
                         entityUsage:Seq[Int],
-                        pairwiseComponents:Map[(Set[String], Set[String]), Boolean]
+                        pairwiseComponents:Map[(Set[String], Set[String]), Boolean],
+                        successful:Boolean
+
                        ) extends State {
   override def toFeatures: Map[String, Double] =
     Map(
       "iterationNum" -> iterationNum,
       "numNodes" -> numNodes,
       "numEdges" -> numEdges,
+      "successful" -> (if(successful) 1.0 else 0.0),
     )
 }
 
