@@ -1,14 +1,14 @@
 package org.ml4ai
 
-import org.ml4ai.utils.{TransitionMemory, any}
+import org.ml4ai.utils.{Memory, any}
 import org.scalatest.{FlatSpec, Matchers}
 
 import scala.util.Random
 
-class TestTransitionMemory extends FlatSpec with Matchers{
+class TestMemory extends FlatSpec with Matchers{
 
-  def buildSampleMemory: TransitionMemory[Int] = {
-    val mem = new TransitionMemory[Int](maxSize = 3)
+  def buildSampleMemory: Memory[Int] = {
+    val mem = new Memory[Int](maxSize = 3)
     mem ++= Seq(1,2,3)
     mem
   }
@@ -27,7 +27,7 @@ class TestTransitionMemory extends FlatSpec with Matchers{
   }
 
   it should "not drop elements if there's enough room to remember more" in {
-    val mem = new TransitionMemory[Int](maxSize = 5)
+    val mem = new Memory[Int](maxSize = 5)
     mem remember Seq(1,2)
     mem remember Seq(45, 678)
 
@@ -41,7 +41,7 @@ class TestTransitionMemory extends FlatSpec with Matchers{
         As long  as one of the samples is different from the prefix, we can consider this feature as working correctly.
      */
     implicit val rnd: Random = utils.buildRandom()
-    val mem = new TransitionMemory[Int](maxSize = 5)
+    val mem = new Memory[Int](maxSize = 5)
     mem remember (1 to 5)
     val prefix = mem.take(3)
     val subSamples = (0 until 3) map (_ => mem.sample(3))

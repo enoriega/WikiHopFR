@@ -11,7 +11,7 @@ import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 import org.ml4ai.agents.{AgentObserver, EpGreedyPolicy, PolicyAgent}
 import org.ml4ai.mdp._
-import org.ml4ai.utils.{FutureUtils, HttpUtils, TransitionMemory, WikiHopParser, lemmatize, prettyPrintMap, rng, using}
+import org.ml4ai.utils.{FutureUtils, HttpUtils, Memory, TransitionMemory, WikiHopParser, lemmatize, prettyPrintMap, rng, using}
 import org.ml4ai.{WHConfig, WikiHopInstance}
 import org.sarsamora.Decays
 import sun.reflect.generics.reflectiveObjects.NotImplementedException
@@ -47,7 +47,7 @@ object TrainFR extends App with LazyLogging{
     */
   def updateParameters(network:Approximator)(implicit rng:Random):Unit = {
     // Sample a mini batch
-    val miniBatch = memory.sample(10000)
+    val miniBatch = memory.sampleWithReward(5000, .8f)
 
     val payload =
       compact {
@@ -169,7 +169,7 @@ object TrainFR extends App with LazyLogging{
   val epsilonDecay = decayFactory(WHConfig.Training.Epsilon.upperBound, WHConfig.Training.Epsilon.lowerBound, (numEpisodes*WHConfig.Training.Epsilon.length).toInt, 0).iterator
   val epsilonIterator = epsilonDecay
 
-  val memory = new TransitionMemory[Transition](maxSize = WHConfig.Training.transitionMemorySize)
+  val memory = new TransitionMemory(maxSize = WHConfig.Training.transitionMemorySize)
 
   val smallInstances = selectSmall(instances)
   val streamIterator = Stream.continually(smallInstances.toStream).flatten.iterator

@@ -4,7 +4,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.ml4ai.WHConfig
 import org.ml4ai.agents.AgentObserver
 import org.ml4ai.mdp.{WikiHopEnvironment, WikiHopState}
-import org.ml4ai.utils.TransitionMemory
+import org.ml4ai.utils.{Memory, TransitionMemory}
 import org.sarsamora.actions.Action
 
 import scala.collection.mutable.ListBuffer
@@ -12,7 +12,7 @@ import scala.collection.mutable.ListBuffer
 class TrainingAgentObserver(epsilons:Iterator[Double]) extends AgentObserver with LazyLogging{
   var state:Option[WikiHopState] = None
   var actionLog:ListBuffer[(Double, Double, Action)] = new ListBuffer[(Double, Double, Action)]()
-  val memory = new TransitionMemory[Transition](maxSize = WHConfig.Training.transitionMemorySize)
+  val memory = new TransitionMemory(maxSize = WHConfig.Training.transitionMemorySize)
   val stats = new ListBuffer[EpisodeStats]()
 
   override def startedEpisode(env: WikiHopEnvironment): Unit = ()

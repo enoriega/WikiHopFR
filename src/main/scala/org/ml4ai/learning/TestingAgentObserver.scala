@@ -4,7 +4,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.ml4ai.WHConfig
 import org.ml4ai.agents.AgentObserver
 import org.ml4ai.mdp.{WikiHopEnvironment, WikiHopState}
-import org.ml4ai.utils.TransitionMemory
+import org.ml4ai.utils.Memory
 import org.sarsamora.actions.Action
 
 import scala.collection.mutable.ListBuffer
