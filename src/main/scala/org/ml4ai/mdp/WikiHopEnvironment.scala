@@ -197,8 +197,8 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
 //
 //    val failureReward = - papersRead.size
 
-    val successReward = - papersRead.size
-    val failureReward = - papersRead.size
+    val successReward = - (papersRead.size^2)
+    val failureReward = - (papersRead.size^2)
 
     val livingReward = WHConfig.Environment.livingReward
     val sigmoidFactor = successReward*0.5 // TODO Parameterize the ratio
