@@ -54,8 +54,10 @@ object LuceneHelper extends LazyLogging {
     }
   }
 
+  private val cachedQueries = new mutable.HashSet[(Set[String], Set[String])]()
+
   // Do the actual IR
-  def retrieveDocumentNames(action: Action, instanceToFilter:Option[Set[String]] = None, searcher:IndexSearcher = defaultSearcher):Set[String] = {
+  def retrieveDocumentNames(action: Action, instanceToFilter:Option[Set[String]] = None, searcher:IndexSearcher = defaultSearcher, checkForEquivalence:Boolean = true):Set[String] = {
 
         // Build the query
         val query = actionToQuery(action)
@@ -70,12 +72,35 @@ object LuceneHelper extends LazyLogging {
             doc.get("hash")
           }).toSet
 
-        instanceToFilter match {
-          case Some(criteria) =>
-            result intersect criteria
-          case None =>
-            result
+        val ret =
+          instanceToFilter match {
+            case Some(criteria) =>
+              result intersect criteria
+            case None =>
+              result
+          }
+
+        if(checkForEquivalence){
+          action match {
+            case ExplorationDouble(ea, eb) =>
+              if(!(cachedQueries contains (ea, eb)) && !(cachedQueries contains (eb, ea))) {
+                cachedQueries += Tuple2(ea, eb)
+                val otherDocs = retrieveDocumentNames(Exploitation(ea, eb), instanceToFilter, searcher, false)
+                val size = ret.intersect(otherDocs).size
+                logger.debug(s"Query intersection debugging:\t$ea\t$eb\t$size")
+              }
+            case Exploitation(ea, eb) =>
+              if(!(cachedQueries contains (ea, eb)) && !(cachedQueries contains (eb, ea))) {
+                cachedQueries += Tuple2(ea, eb)
+                val otherDocs = retrieveDocumentNames(ExplorationDouble(ea, eb), instanceToFilter, searcher, false)
+                val size = ret.intersect(otherDocs).size
+                logger.debug(s"Query intersection debugging:\t$ea\t$eb\t$size")
+              }
+          }
         }
+
+
+        ret
   }
 
   /**
