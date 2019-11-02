@@ -359,9 +359,19 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
             key -> value
         }.toMap
 
+
+      val pairs =
+        for{
+          ea <- tEntities
+          eb <- tEntities
+          if ea != eb
+      } yield (ea, eb)
+
+      val (exploreScores, exploitScores) = (luceneExplorationScore(pairs), luceneExploitationScore(pairs))
+
       val ret =
         WikiHopState(iterationNum, numNodes, numEdges, startTokens, endTokens,
-          Some(tEntities), iterationsOfIntroduction, ranks, entityUsage, pairwiseComponents, if(finishedEpisode) outcome.nonEmpty else false)
+          Some(tEntities), iterationsOfIntroduction, ranks, entityUsage, pairwiseComponents, if(finishedEpisode) outcome.nonEmpty else false, exploreScores, exploitScores)
 
       cachedObservation = Some(ret)
       ret
@@ -477,12 +487,26 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
   /**
     * Returns the average lucene score for an exploit action of the pair of entities
     */
-  private def luceneScore(pairs:Seq[(Set[String], Set[String])]):Seq[Float] = {
+  private def luceneExploitationScore(pairs:Seq[(Set[String], Set[String])]):Seq[Float] = {
     // For each pair, get the average lucene score of its Exploit action as a proxy for their relevance
     pairs map {
       case (ea, eb) =>
         // Build the action
         val act = Exploitation(ea, eb)
+        // Score the action as the average lucene score for its results
+        LuceneHelper.scoreAction(act)
+    }
+  }
+
+  /**
+    * Returns the average lucene score for an explore action of the pair of entities
+    */
+  private def luceneExplorationScore(pairs:Seq[(Set[String], Set[String])]):Seq[Float] = {
+    // For each pair, get the average lucene score of its Exploit action as a proxy for their relevance
+    pairs map {
+      case (ea, eb) =>
+        // Build the action
+        val act = ExplorationDouble(ea, eb)
         // Score the action as the average lucene score for its results
         LuceneHelper.scoreAction(act)
     }
@@ -515,7 +539,7 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
         val criteria = WHConfig.Environment.entitySelection.toLowerCase match {
           case "distance" => distance _
           case "rank" => combineDegree _
-          case "lucene" => luceneScore _
+          case "lucene" => luceneExploitationScore _
           case t =>
             val message = s"Unimplemented entity selection criteria: $t"
             logger.error(message)

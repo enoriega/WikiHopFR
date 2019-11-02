@@ -13,8 +13,9 @@ case class WikiHopState(iterationNum:Int,
                         ranks:Seq[Int],
                         entityUsage:Seq[Int],
                         pairwiseComponents:Map[(Set[String], Set[String]), Boolean],
-                        successful:Boolean
-
+                        successful:Boolean,
+                        exploreScores:Seq[Float],
+                        exploitScores:Seq[Float]
                        ) extends State {
   override def toFeatures: Map[String, Double] =
     Map(
@@ -23,8 +24,4 @@ case class WikiHopState(iterationNum:Int,
       "numEdges" -> numEdges,
       "successful" -> (if(successful) 1.0 else 0.0),
     )
-}
-
-object WikiHopState{
-  val numFeatures:Int = 3
 }

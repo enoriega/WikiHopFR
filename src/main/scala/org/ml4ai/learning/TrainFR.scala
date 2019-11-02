@@ -9,7 +9,9 @@ import org.apache.commons.io.FileUtils
 import org.apache.http.impl.client.{CloseableHttpClient, HttpClients}
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
+import org.ml4ai.WHConfig.Lucene
 import org.ml4ai.agents.{AgentObserver, EpGreedyPolicy, PolicyAgent}
+import org.ml4ai.ir.LuceneHelper
 import org.ml4ai.mdp._
 import org.ml4ai.utils.{FutureUtils, HttpUtils, Memory, TransitionMemory, WikiHopParser, lemmatize, prettyPrintMap, rng, using}
 import org.ml4ai.{WHConfig, WikiHopInstance}
@@ -64,8 +66,13 @@ object TrainFR extends App with LazyLogging{
                 case _ => throw new NotImplementedException
               }
 
+              val exploreScore = LuceneHelper.scoreAction(ExplorationDouble(entityA, entityB))
+              val exploitScore = LuceneHelper.scoreAction(Exploitation(entityA, entityB))
+
               val indexA = state.candidateEntities.get.indexOf(entityA)
               val indexB = state.candidateEntities.get.indexOf(entityB)
+
+              val nextStateCandidates = nextState.candidateEntities.get
 
               // TODO verify why is an entity not present in the list
               val extendedFeatures =
@@ -74,7 +81,10 @@ object TrainFR extends App with LazyLogging{
                     "intro_a" -> (if(indexA >= 0) state.iterationsOfIntroduction(indexA) else 0.0),
                     "intro_b" -> (if(indexB >= 0) state.iterationsOfIntroduction(indexB) else 0.0),
                     "rank_a" -> (if(indexA >= 0) state.ranks(indexA) else 0.0),
-                    "rank_b" -> (if(indexB >= 0) state.ranks(indexB) else 0.0))
+                    "rank_b" -> (if(indexB >= 0) state.ranks(indexB) else 0.0),
+                    "explore_score" -> exploreScore.toDouble,
+                    "exploit_score" -> exploitScore.toDouble,
+                )
 
               ("state" ->
                 ("features" -> extendedFeatures) ~
@@ -88,10 +98,12 @@ object TrainFR extends App with LazyLogging{
                 ("reward" -> reward) ~
                 ("new_state" ->
                   ("features" -> nextState.toFeatures) ~
-                  ("candidates" -> nextState.candidateEntities.get) ~
+                  ("candidates" -> nextStateCandidates) ~
                   ("iterationsOfIntroduction" -> nextState.iterationsOfIntroduction) ~
                   ("ranks" -> nextState.ranks) ~
-                  ("entityUsage" -> nextState.ranks))
+                  ("entityUsage" -> nextState.ranks)  ~
+                  ("exploreScores" -> nextState.exploreScores) ~
+                  ("exploitScores" -> nextState.exploitScores))
           }
         }
       }
