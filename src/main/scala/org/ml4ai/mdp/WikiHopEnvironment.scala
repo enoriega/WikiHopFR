@@ -336,18 +336,17 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
       }
       val entityUsage = tEntities map timesUsed
 
-      val entityPairs =
+      val pairs =
         for{
           ea <- tEntities
           eb <- tEntities
           if ea != eb
-        } yield Set(ea, eb)
+        } yield (ea, eb)
 
       // TODO clean this up
       val pairwiseComponents =
-        entityPairs.toSet.map{
-          pair:Set[Set[String]] =>
-            val (ea, eb) = (pair.head, pair.tail.head)
+        pairs.map{
+          case (ea, eb) =>
             val key = (ea, eb)
             val value =
               knowledgeGraph match {
@@ -356,16 +355,11 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
                 case None => false
               }
 
-            key -> value
-        }.toMap
+            value
+        }
 
 
-      val pairs =
-        for{
-          ea <- tEntities
-          eb <- tEntities
-          if ea != eb
-      } yield (ea, eb)
+
 
       val (exploreScores, exploitScores) = (luceneExplorationScore(pairs), luceneExploitationScore(pairs))
 

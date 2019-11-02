@@ -35,8 +35,8 @@ class EpGreedyPolicy(decay:Iterator[Double], network:Approximator)(implicit rng:
               ("ranks" -> state.ranks) ~
               ("entityUsage" -> state.ranks) ~
               ("exploreScores" -> state.exploreScores) ~
-              ("exploitScores" -> state.exploitScores)
-//              ("pairwiseComponents" -> state.pairwiseComponents)
+              ("exploitScores" -> state.exploitScores) ~
+              ("sameComponents" -> state.pairwiseComponents)
             )
           }
         }

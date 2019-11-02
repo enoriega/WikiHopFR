@@ -74,6 +74,18 @@ object TrainFR extends App with LazyLogging{
 
               val nextStateCandidates = nextState.candidateEntities.get
 
+              val pairs =
+                for{
+                  a <- state.candidateEntities.get
+                  b <- state.candidateEntities.get
+                  if a != b
+                } yield (a, b)
+
+
+              val comps = (pairs zip state.pairwiseComponents).toMap
+
+              val sameComponent = comps.getOrElse((entityA, entityB), false)
+
               // TODO verify why is an entity not present in the list
               val extendedFeatures =
                 features ++ Map("log_count_a" -> (if(indexA >= 0) state.entityUsage(indexA) else 0.0),
@@ -84,6 +96,7 @@ object TrainFR extends App with LazyLogging{
                     "rank_b" -> (if(indexB >= 0) state.ranks(indexB) else 0.0),
                     "explore_score" -> exploreScore.toDouble,
                     "exploit_score" -> exploitScore.toDouble,
+                    "same_component" -> (if(sameComponent) 1.0 else 0.0),
                 )
 
               ("state" ->
@@ -103,7 +116,8 @@ object TrainFR extends App with LazyLogging{
                   ("ranks" -> nextState.ranks) ~
                   ("entityUsage" -> nextState.ranks)  ~
                   ("exploreScores" -> nextState.exploreScores) ~
-                  ("exploitScores" -> nextState.exploitScores))
+                  ("exploitScores" -> nextState.exploitScores) ~
+                  ("sameComponents" -> nextState.pairwiseComponents))
           }
         }
       }
