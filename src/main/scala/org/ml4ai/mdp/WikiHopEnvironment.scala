@@ -197,8 +197,11 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
 //
 //    val failureReward = - papersRead.size
 
-    val successReward = - (papersRead.size^2)
-    val failureReward = - (papersRead.size^2)
+//    val successReward = - (papersRead.size^2)
+//    val failureReward = - (papersRead.size^2)
+
+    val successReward = WHConfig.Environment.successReward
+    val failureReward = WHConfig.Environment.failureReward
 
     val livingReward = WHConfig.Environment.livingReward
     val sigmoidFactor = successReward*0.5 // TODO Parameterize the ratio
@@ -362,8 +365,10 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
 
 
       val (exploreScores, exploitScores) = (luceneExplorationScore(pairs), luceneExploitationScore(pairs))
-      logger.debug(s"Exploit score:\t${exploitScores.max}")
-      logger.debug(s"Explore score:\t${exploreScores.max}")
+      if(exploitScores.nonEmpty)
+        logger.debug(s"Exploit score:\t${exploitScores.max}")
+      if(exploreScores.nonEmpty)
+        logger.debug(s"Explore score:\t${exploreScores.max}")
 
       val ret =
         WikiHopState(iterationNum, numNodes, numEdges, startTokens, endTokens,
