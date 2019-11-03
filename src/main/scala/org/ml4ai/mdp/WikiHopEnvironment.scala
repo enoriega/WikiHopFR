@@ -362,6 +362,8 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
 
 
       val (exploreScores, exploitScores) = (luceneExplorationScore(pairs), luceneExploitationScore(pairs))
+      logger.debug(s"Exploit score:\t${exploitScores.max}")
+      logger.debug(s"Explore score:\t${exploreScores.max}")
 
       val ret =
         WikiHopState(iterationNum, numNodes, numEdges, startTokens, endTokens,
