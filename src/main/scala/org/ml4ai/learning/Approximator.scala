@@ -16,6 +16,7 @@ import scala.language.implicitConversions
 class DQN(initToZero:Boolean = false) extends Approximator(initToZero,"dqn")
 class LinearQN(initToZero:Boolean = false) extends Approximator(initToZero,"linear")
 class MLP(initToZero:Boolean = false) extends Approximator(initToZero,"mlp")
+class BQN(initToZero:Boolean = false) extends Approximator(initToZero,"bqn")
 
 abstract class Approximator(initToZero:Boolean, functionalForm:String) extends LazyLogging{
 

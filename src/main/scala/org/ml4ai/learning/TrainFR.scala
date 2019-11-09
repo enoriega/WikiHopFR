@@ -163,6 +163,8 @@ object TrainFR extends App with LazyLogging{
       new LinearQN()
     case "mlp" =>
       new MLP()
+    case "bqn" =>
+      new BQN()
     case a =>
       val msg = s"Undefined approximator: $a"
       logger.error(msg)
