@@ -123,8 +123,8 @@ object TrainFR extends App with LazyLogging{
 
               ("state" ->
                 ("features" -> extendedFeatures) ~
-                  ("A" -> entityA) ~ ("B" -> entityB)) ~
-                  ("typeA" -> entityAType ) ~ ("typeB" -> entityBType) ~
+                  ("A" -> entityA) ~ ("B" -> entityB) ~
+                  ("typeA" -> entityAType ) ~ ("typeB" -> entityBType)) ~
                 ("action" ->
                   (action match {
                     case _: Exploitation => "exploitation"
