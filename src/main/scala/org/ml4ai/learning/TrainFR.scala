@@ -59,12 +59,33 @@ object TrainFR extends App with LazyLogging{
 
               val features = state.toFeatures
 
+              val currentStateEntityTypes =
+                (state.candidateEntities, state.candidateEntitiesTypes) match {
+                  case (Some(entities), Some(types)) =>
+                    if(types.nonEmpty)
+                      (entities zip types.map{
+                        v =>
+                          if(v.isEmpty)
+                            Set("")
+                          else
+                            v
+                      }).toMap
+                    else
+                      (entities map (_ -> Set(""))).toMap
+                  case _ =>
+                    Map.empty[Set[String], Set[String]]
+                }
+
               val (entityA, entityB) = action match {
                 case Exploration(single) => (single, single)
                 case ExplorationDouble(entityA, entityB) => (entityA, entityB)
                 case Exploitation(entityA, entityB) => (entityA, entityB)
                 case _ => throw new NotImplementedException
               }
+
+              val (entityAType:String, entityBType:String) =
+                (currentStateEntityTypes.getOrElse(entityA, Set("")).head,
+                  currentStateEntityTypes.getOrElse(entityB, Set("")).head)
 
               val exploreScore = LuceneHelper.scoreAction(ExplorationDouble(entityA, entityB))
               val exploitScore = LuceneHelper.scoreAction(Exploitation(entityA, entityB))
@@ -73,6 +94,7 @@ object TrainFR extends App with LazyLogging{
               val indexB = state.candidateEntities.get.indexOf(entityB)
 
               val nextStateCandidates = nextState.candidateEntities.get
+              val nextStateCandidatesTypes = nextState.candidateEntitiesTypes.get
 
               val pairs =
                 for{
@@ -101,8 +123,8 @@ object TrainFR extends App with LazyLogging{
 
               ("state" ->
                 ("features" -> extendedFeatures) ~
-
                   ("A" -> entityA) ~ ("B" -> entityB)) ~
+                  ("typeA" -> entityAType ) ~ ("typeB" -> entityBType) ~
                 ("action" ->
                   (action match {
                     case _: Exploitation => "exploitation"
@@ -112,6 +134,7 @@ object TrainFR extends App with LazyLogging{
                 ("new_state" ->
                   ("features" -> nextState.toFeatures) ~
                   ("candidates" -> nextStateCandidates) ~
+                  ("candidatesTypes" -> nextStateCandidatesTypes) ~
                   ("iterationsOfIntroduction" -> nextState.iterationsOfIntroduction) ~
                   ("ranks" -> nextState.ranks) ~
                   ("entityUsage" -> nextState.ranks)  ~

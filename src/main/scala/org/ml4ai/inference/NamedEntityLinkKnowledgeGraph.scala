@@ -38,7 +38,9 @@ class NamedEntityLinkKnowledgeGraph(documents:Iterable[(String,Document)]) exten
           (b, hashB) <- entityHashes
           if hashA != 0 && hashB != 0 && hashA != hashB
           if hasConnectingPath(a, b)
-        } yield (hashA, hashB, AttributingElement(None, sIx, hash))).toSet
+        } yield {
+          (hashA, hashB, AttributingElement(None, sIx, hash))
+        }).toSet
     }
   }
 

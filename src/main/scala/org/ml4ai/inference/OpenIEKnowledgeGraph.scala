@@ -31,8 +31,9 @@ class OpenIEKnowledgeGraph(documents:Iterable[(String,Document)]) extends Knowle
               r =>
                 val sHash = groupedEntityHashes(filterUselessLemmas(r.subjectLemmas).toSet)
                 val dHash = groupedEntityHashes(filterUselessLemmas(r.objectLemmas).toSet)
-                if(sHash != 0 && dHash != 0)
+                if(sHash != 0 && dHash != 0) {
                   Some((sHash, dHash, AttributingElement(Some(r), sIx, hash)))
+                }
                 else
                   None
             } collect {

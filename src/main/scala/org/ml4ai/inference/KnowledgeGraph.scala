@@ -114,6 +114,7 @@ abstract class KnowledgeGraph(documents:Iterable[(String,Document)]) extends Dot
 
   // Entities belonging to a graph
   lazy val entities:Iterable[Set[String]] = graph.nodes map (e => entityHashToText(e.value))
+  lazy val entityTypes:mutable.Map[Set[String], Set[String]] = new mutable.HashMap()
   lazy val edges: collection.Set[VerboseRelation] = graph.edges map (r => relationToVerboseRelation(r.value.relation))
   lazy val degrees: Map[Set[String], Int] = (graph.nodes map (n => entityHashToText(n.value) -> n.degree)).toMap
   protected lazy val pathCache: mutable.Map[(String, String), Iterable[Seq[VerboseRelation]]] = new mutable.HashMap[(String, String), Iterable[Seq[VerboseRelation]]].withDefaultValue(Seq.empty)

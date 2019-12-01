@@ -122,8 +122,8 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
           val ret = new mutable.ListBuffer[Action]
 
           for{
-            ea <- currentEntities
-            eb <- currentEntities
+            (ea, _) <- currentEntities
+            (eb, _) <- currentEntities
             if ea != eb
           } {
             ret += ExplorationDouble(ea, eb)
@@ -328,7 +328,7 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
           (0, 0)
       }
 
-      val tEntities = topEntities
+      val (tEntities, tEntitiesTypes) = topEntities.unzip
       val iterationsOfIntroduction = tEntities map entityIntroductionJournal
       val ranks = tEntities map {
         entity =>
@@ -372,7 +372,7 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
 
       val ret =
         WikiHopState(iterationNum, numNodes, numEdges, startTokens, endTokens,
-          Some(tEntities), iterationsOfIntroduction, ranks, entityUsage, pairwiseComponents, if(finishedEpisode) outcome.nonEmpty else false, exploreScores, exploitScores)
+          Some(tEntities), Some(tEntitiesTypes), iterationsOfIntroduction, ranks, entityUsage, pairwiseComponents, if(finishedEpisode) outcome.nonEmpty else false, exploreScores, exploitScores)
 
       cachedObservation = Some(ret)
       ret
@@ -517,12 +517,12 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
   /**
     * @return top entities to be considered as target of an action
     */
-  def topEntities:Seq[Set[String]] = {
+  def topEntities:Seq[(Set[String], Set[String])] = {
     // Fetch the last set of entities chosen
     entitySelectionList match {
       // If there are no entities selected yet, return the end points
       case Nil =>
-        Seq(this.startTokens, this.endTokens)
+        Seq((this.startTokens, Set.empty), (this.endTokens, Set.empty))
       case (lastA, lastB)::_ =>
         // Pre-compute a set for efficiency
         val previouslyChosen = entitySelectionList.toSet
@@ -532,7 +532,9 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
           case Some(kg) =>
             for{
               candidate <- kg.entities
-            } yield { Seq((lastA, candidate), (lastB, candidate), (startTokens, candidate), (endTokens, candidate))}
+            } yield {
+              Seq((lastA, candidate), (lastB, candidate), (startTokens, candidate), (endTokens, candidate))
+            }
           case None =>
             Seq.empty
         }
@@ -565,8 +567,17 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
         val scores = criteria(pairsToTest)
 
         // Take the top N entities by their distance
-        (pairsToTest zip scores).sortBy(_._2).map(_._1._2).distinct.take(WHConfig.Environment.topEntitiesNum)
+        val topRanked =
+          (pairsToTest zip scores).sortBy(_._2).map(_._1._2).distinct.take(WHConfig.Environment.topEntitiesNum)
 
+        val entityTypes = knowledgeGraph match {
+          case Some(kg) =>
+            topRanked map (e => Set() ++ kg.entityTypes(e))
+          case None =>
+            Seq.fill(topRanked.size)(Set.empty[String])
+        }
+
+        topRanked zip entityTypes
     }
   }
 

@@ -33,4 +33,15 @@ abstract class NERBasedKnowledgeGraph(documents:Iterable[(String,Document)]) ext
       case tb:TextBoundMention if tb.labels.contains("Entity") => tb
     }
   }
+
+
+  protected def getNERLabel(tb:TextBoundMention):String = {
+    val validLabels = tb.labels filter NERBasedKnowledgeGraph.entityLabels.contains
+    assert(validLabels.size == 1, "There's a named entity with more than one entity type")
+    validLabels.head
+  }
+}
+
+object NERBasedKnowledgeGraph {
+  val entityLabels = Set("Person", "Organization", "Location", "Date", "Time", "Misc")
 }

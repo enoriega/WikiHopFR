@@ -9,6 +9,7 @@ case class WikiHopState(iterationNum:Int,
                         startEntity:Set[String],
                         endEntity:Set[String],
                         candidateEntities:Option[Seq[Set[String]]], // Store the candidate entities in the state for future usage
+                        candidateEntitiesTypes:Option[Seq[Set[String]]],
                         iterationsOfIntroduction:Seq[Int],
                         ranks:Seq[Int],
                         entityUsage:Seq[Int],

@@ -31,6 +31,7 @@ class EpGreedyPolicy(decay:Iterator[Double], network:Approximator)(implicit rng:
           render{
             Seq(("features" -> state.toFeatures) ~
               ("candidates" -> state.candidateEntities.get) ~
+              ("candidatesTypes" -> state.candidateEntitiesTypes.get) ~
               ("iterationsOfIntroduction" -> state.iterationsOfIntroduction) ~
               ("ranks" -> state.ranks) ~
               ("entityUsage" -> state.ranks) ~

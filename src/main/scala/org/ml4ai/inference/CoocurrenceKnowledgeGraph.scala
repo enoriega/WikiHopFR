@@ -3,6 +3,8 @@ package org.ml4ai.inference
 import org.clulab.processors.Document
 import org.ml4ai.utils.{AnnotationsLoader, filterUselessLemmas}
 
+import scala.collection.mutable
+
 class CoocurrenceKnowledgeGraph(documents:Iterable[(String,Document)]) extends NERBasedKnowledgeGraph(documents) {
 
   /**
@@ -28,8 +30,19 @@ class CoocurrenceKnowledgeGraph(documents:Iterable[(String,Document)]) extends N
 
     entities.groupBy(_.sentence).flatMap{
       case (sIx, es) =>
+        // Compute the entity lemmas
+        val entityLemmas = es map (e => filterUselessLemmas(e.lemmas.get).toSet)
         // Compute the entity hashes
-        val entityHashes = es map (e => groupedEntityHashes(filterUselessLemmas(e.lemmas.get).toSet))
+        val entityHashes = entityLemmas map groupedEntityHashes
+
+        for((e, lemmas) <- es zip entityLemmas){
+          val label = getNERLabel(e)
+          if(entityTypes contains lemmas)
+            entityTypes(lemmas) += label
+          else
+            entityTypes += (lemmas -> Set(label))
+        }
+
         // Get all the pairs of entity hashes and compute their attribution
         (for{
           a <- entityHashes
