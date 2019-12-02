@@ -66,12 +66,12 @@ object TrainFR extends App with LazyLogging{
                       (entities zip types.map{
                         v =>
                           if(v.isEmpty)
-                            Set("")
+                            Set("UNK")
                           else
                             v
                       }).toMap
                     else
-                      (entities map (_ -> Set(""))).toMap
+                      (entities map (_ -> Set("UNK"))).toMap
                   case _ =>
                     Map.empty[Set[String], Set[String]]
                 }
@@ -84,8 +84,8 @@ object TrainFR extends App with LazyLogging{
               }
 
               val (entityAType:String, entityBType:String) =
-                (currentStateEntityTypes.getOrElse(entityA, Set("")).head,
-                  currentStateEntityTypes.getOrElse(entityB, Set("")).head)
+                (currentStateEntityTypes.getOrElse(entityA, Set("UNK")).head,
+                  currentStateEntityTypes.getOrElse(entityB, Set("UNK")).head)
 
               val exploreScore = LuceneHelper.scoreAction(ExplorationDouble(entityA, entityB))
               val exploitScore = LuceneHelper.scoreAction(Exploitation(entityA, entityB))
