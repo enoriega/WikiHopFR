@@ -16,7 +16,7 @@ import scala.util.{Failure, Success, Try}
 
 case class KBLabel(relation:Relation)
 
-abstract class KnowledgeGraph(documents:Iterable[(String,Document)]) extends DotEnabled with LazyLogging{
+abstract class KnowledgeGraph(val documents:Iterable[(String,Document)]) extends DotEnabled with LazyLogging{
 
   protected lazy val groupedEntityHashes: Map[Set[String], Int] = {
 
@@ -92,7 +92,7 @@ abstract class KnowledgeGraph(documents:Iterable[(String,Document)]) extends Dot
   protected lazy val entityLemmaHashes: Map[Set[String], Int] = buildEntityLemmaHashes
 
   // Knowledge relation instances
-  protected lazy val relations:Iterable[Relation] =
+  lazy val relations:Iterable[Relation] =
     documents.flatMap{
       d => extractRelationsFromDoc(d._1, d._2)
 
