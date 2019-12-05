@@ -43,5 +43,5 @@ abstract class NERBasedKnowledgeGraph(documents:Iterable[(String,Document)]) ext
 }
 
 object NERBasedKnowledgeGraph {
-  val entityLabels = Set("Person", "Organization", "Location", "Date", "Time", "Misc")
+  val entityLabels = Set("Person", "Organization", "Location", "Date", "Time", "Misc", "CommonNoun")
 }

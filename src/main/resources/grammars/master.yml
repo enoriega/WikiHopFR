@@ -6,6 +6,7 @@ taxonomy:
         - Date
         - Time
         - Misc
+        - CommonNoun
     - Relation:
         - SimpleRelation
         - PrepositionalRelation
