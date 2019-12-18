@@ -1,6 +1,9 @@
 package org.ml4ai
 
+import org.clulab.struct.Interval
+import org.json4s.JsonAST.JValue
 import org.sarsamora.actions.Action
+import org.json4s.JsonDSL._
 
 package object mdp {
 

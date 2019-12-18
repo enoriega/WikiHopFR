@@ -76,6 +76,23 @@ object TrainFR extends App with LazyLogging{
                     Map.empty[Set[String], Set[String]]
                 }
 
+              val currentStateEntityOrigins =
+                (state.candidateEntities, state.candidateEntitiesOrigins) match {
+                  case (Some(entities), Some(origins)) =>
+                    if(origins.nonEmpty)
+                      (entities zip origins.map{
+                        v =>
+                          if(v.isEmpty)
+                            Set()
+                          else
+                            v
+                      }).toMap
+                    else
+                      (entities map (_ -> Set())).toMap
+                  case _ =>
+                    Map.empty[Set[String], Set[EntityOrigin]]
+                }
+
               val (entityA, entityB) = action match {
                 case Exploration(single) => (single, single)
                 case ExplorationDouble(entityA, entityB) => (entityA, entityB)
@@ -86,6 +103,11 @@ object TrainFR extends App with LazyLogging{
               val (entityAType:String, entityBType:String) =
                 (currentStateEntityTypes.getOrElse(entityA, Set("UNK")).head,
                   currentStateEntityTypes.getOrElse(entityB, Set("UNK")).head)
+
+
+              val (originsA:Set[EntityOrigin], originsB:Set[EntityOrigin]) =
+                (currentStateEntityOrigins.getOrElse(entityA, Set.empty[EntityOrigin]),
+                  currentStateEntityOrigins.getOrElse(entityB, Set.empty[EntityOrigin]))
 
               val exploreScore = LuceneHelper.scoreAction(ExplorationDouble(entityA, entityB))
               val exploitScore = LuceneHelper.scoreAction(Exploitation(entityA, entityB))
@@ -124,23 +146,27 @@ object TrainFR extends App with LazyLogging{
               ("state" ->
                 ("features" -> extendedFeatures) ~
                   ("A" -> entityA) ~ ("B" -> entityB) ~
-                  ("typeA" -> entityAType ) ~ ("typeB" -> entityBType)) ~
+                  ("typeA" -> entityAType ) ~ ("typeB" -> entityBType) ~
+                  ("originsA" -> originsA) ~
+                  ("originsB" -> originsB)
+                ) ~
                 ("action" ->
                   (action match {
                     case _: Exploitation => "exploitation"
                     case _ => "exploration"
                   })) ~
                 ("reward" -> reward) ~
-                ("new_state" ->
-                  ("features" -> nextState.toFeatures) ~
-                  ("candidates" -> nextStateCandidates) ~
-                  ("candidatesTypes" -> nextStateCandidatesTypes) ~
-                  ("iterationsOfIntroduction" -> nextState.iterationsOfIntroduction) ~
-                  ("ranks" -> nextState.ranks) ~
-                  ("entityUsage" -> nextState.ranks)  ~
-                  ("exploreScores" -> nextState.exploreScores) ~
-                  ("exploitScores" -> nextState.exploitScores) ~
-                  ("sameComponents" -> nextState.pairwiseComponents))
+                ("new_state" -> state)
+//                  ("features" -> nextState.toFeatures) ~
+//                  ("candidates" -> nextStateCandidates) ~
+//                  ("candidatesTypes" -> nextStateCandidatesTypes) ~
+//                  ("candidatesOrigins" -> state.candidateEntitiesOrigins.get) ~
+//                  ("iterationsOfIntroduction" -> nextState.iterationsOfIntroduction) ~
+//                  ("ranks" -> nextState.ranks) ~
+//                  ("entityUsage" -> nextState.ranks)  ~
+//                  ("exploreScores" -> nextState.exploreScores) ~
+//                  ("exploitScores" -> nextState.exploitScores) ~
+//                  ("sameComponents" -> nextState.pairwiseComponents))
           }
         }
       }

@@ -3,6 +3,7 @@ package org.ml4ai.inference
 import com.typesafe.scalalogging.LazyLogging
 import org.clulab.processors.{Document, Sentence}
 import org.ml4ai.inference.viz.DotEnabled
+import org.ml4ai.mdp.EntityOrigin
 import org.ml4ai.utils.AnnotationsLoader
 import org.ml4ai.utils._
 import org.ml4ai.utils.entityGroundingHash
@@ -115,6 +116,7 @@ abstract class KnowledgeGraph(val documents:Iterable[(String,Document)]) extends
   // Entities belonging to a graph
   lazy val entities:Iterable[Set[String]] = graph.nodes map (e => entityHashToText(e.value))
   lazy val entityTypes:mutable.Map[Set[String], Set[String]] = new mutable.HashMap()
+  lazy val entitySources:mutable.Map[Set[String], Set[EntityOrigin]] = new mutable.HashMap()
   lazy val edges: collection.Set[VerboseRelation] = graph.edges map (r => relationToVerboseRelation(r.value.relation))
   lazy val degrees: Map[Set[String], Int] = (graph.nodes map (n => entityHashToText(n.value) -> n.degree)).toMap
   protected lazy val pathCache: mutable.Map[(String, String), Iterable[Seq[VerboseRelation]]] = new mutable.HashMap[(String, String), Iterable[Seq[VerboseRelation]]].withDefaultValue(Seq.empty)

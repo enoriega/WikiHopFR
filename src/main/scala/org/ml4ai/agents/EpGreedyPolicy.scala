@@ -3,9 +3,8 @@ package org.ml4ai.agents
 import org.apache.http.impl.client.{CloseableHttpClient, HttpClients}
 import org.json4s.JsonAST.{JArray, JDouble, JField, JInt, JObject, JString, JValue}
 import org.ml4ai.learning.Approximator
-import org.ml4ai.mdp.{RandomAction, WikiHopState}
+import org.ml4ai.mdp.{EntityOrigin, RandomAction, WikiHopState, actionBuilder}
 import org.sarsamora.actions.Action
-import org.ml4ai.mdp.actionBuilder
 import org.ml4ai.utils.{HttpUtils, buildRandom}
 import org.json4s.JsonDSL._
 import org.json4s.native.JsonMethods._
@@ -29,15 +28,16 @@ class EpGreedyPolicy(decay:Iterator[Double], network:Approximator)(implicit rng:
       val payload =
         compact{
           render{
-            Seq(("features" -> state.toFeatures) ~
-              ("candidates" -> state.candidateEntities.get) ~
-              ("candidatesTypes" -> state.candidateEntitiesTypes.get) ~
-              ("iterationsOfIntroduction" -> state.iterationsOfIntroduction) ~
-              ("ranks" -> state.ranks) ~
-              ("entityUsage" -> state.ranks) ~
-              ("exploreScores" -> state.exploreScores) ~
-              ("exploitScores" -> state.exploitScores) ~
-              ("sameComponents" -> state.pairwiseComponents)
+            Seq(state//("features" -> state.toFeatures) ~
+//              ("candidates" -> state.candidateEntities.get) ~
+//              ("candidatesTypes" -> state.candidateEntitiesTypes.get) ~
+//              ("candidatesOrigins" -> state.candidateEntitiesOrigins.get) ~
+//              ("iterationsOfIntroduction" -> state.iterationsOfIntroduction) ~
+//              ("ranks" -> state.ranks) ~
+//              ("entityUsage" -> state.ranks) ~
+//              ("exploreScores" -> state.exploreScores) ~
+//              ("exploitScores" -> state.exploitScores) ~
+//              ("sameComponents" -> state.pairwiseComponents)
             )
           }
         }

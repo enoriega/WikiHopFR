@@ -16,6 +16,7 @@ import org.sarsamora.environment.Environment
 
 import scala.collection.mutable
 import scala.io.Source
+import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 class WikiHopEnvironment(val id:String, val start:String, val end:String, documentUniverse:Option[Set[String]] = None) extends Environment with LazyLogging {
@@ -122,8 +123,8 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
           val ret = new mutable.ListBuffer[Action]
 
           for{
-            (ea, _) <- currentEntities
-            (eb, _) <- currentEntities
+            CandidateEntity(ea, _, _) <- currentEntities
+            CandidateEntity(eb, _, _) <- currentEntities
             if ea != eb
           } {
             ret += ExplorationDouble(ea, eb)
@@ -328,7 +329,11 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
           (0, 0)
       }
 
-      val (tEntities, tEntitiesTypes) = topEntities.unzip
+      val (tEntities, tEntitiesTypes, tEntitiesSources) = topEntities map {
+        candidateEntity =>
+          (candidateEntity.lemmas, candidateEntity.types, candidateEntity.source)
+      } unzip3
+
       val iterationsOfIntroduction = tEntities map entityIntroductionJournal
       val ranks = tEntities map {
         entity =>
@@ -372,7 +377,8 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
 
       val ret =
         WikiHopState(iterationNum, numNodes, numEdges, startTokens, endTokens,
-          Some(tEntities), Some(tEntitiesTypes), iterationsOfIntroduction, ranks, entityUsage, pairwiseComponents, if(finishedEpisode) outcome.nonEmpty else false, exploreScores, exploitScores)
+          Some(tEntities), Some(tEntitiesTypes), Some(tEntitiesSources),
+          iterationsOfIntroduction, ranks, entityUsage, pairwiseComponents, if(finishedEpisode) outcome.nonEmpty else false, exploreScores, exploitScores)
 
       cachedObservation = Some(ret)
       ret
@@ -517,69 +523,145 @@ class WikiHopEnvironment(val id:String, val start:String, val end:String, docume
   /**
     * @return top entities to be considered as target of an action
     */
-  def topEntities:Seq[(Set[String], Set[String])] = {
-    // Fetch the last set of entities chosen
-    entitySelectionList match {
-      // If there are no entities selected yet, return the end points
-      case Nil =>
-        Seq((this.startTokens, Set.empty), (this.endTokens, Set.empty))
-      case (lastA, lastB)::_ =>
-        // Pre-compute a set for efficiency
-        val previouslyChosen = entitySelectionList.toSet
+//  def topEntities:Seq[(Set[String], Set[String])] = {
+//    // Fetch the last set of entities chosen
+//    entitySelectionList match {
+//      // If there are no entities selected yet, return the end points
+//      case Nil =>
+//        Seq((this.startTokens, Set.empty), (this.endTokens, Set.empty))
+//      case (lastA, lastB)::_ =>
+//        // Pre-compute a set for efficiency
+//        val previouslyChosen = entitySelectionList.toSet
+//
+//        // Get all the possible pairs to consider and discard the already chosen
+//        val newPairs = knowledgeGraph match {
+//          case Some(kg) =>
+//            for{
+//              candidate <- kg.entities
+//            } yield {
+//              Seq((lastA, candidate), (lastB, candidate), (startTokens, candidate), (endTokens, candidate))
+//            }
+//          case None =>
+//            Seq.empty
+//        }
+//
+//        val criteria = WHConfig.Environment.entitySelection.toLowerCase match {
+//          case "distance" => distance _
+//          case "rank" => combineDegree _
+//          case "lucene" => luceneExploitationScore _
+//          case t =>
+//            val message = s"Unimplemented entity selection criteria: $t"
+//            logger.error(message)
+//            throw new NotImplementedError(message)
+//        }
+//
+//        // Filter out the elements that have been tested before
+//        val pairsToTest =
+//          newPairs.toSeq.flatten.filter{
+//            case (a, b) =>
+//              if(a == b)
+//                false
+//              else if(previouslyChosen contains ((a, b)))
+//                false
+//              else if(previouslyChosen contains ((b, a)))
+//                false
+//              else
+//                true
+//          }
+//
+//        // Compute their distances in vector space
+//        val scores = criteria(pairsToTest)
+//
+//        // Take the top N entities by their distance
+//        val topRanked =
+//          (pairsToTest zip scores).sortBy(_._2).map(_._1._2).distinct.take(WHConfig.Environment.topEntitiesNum)
+//
+//        val entityTypes = knowledgeGraph match {
+//          case Some(kg) =>
+//            topRanked map (e => Set() ++ kg.entityTypes(e))
+//          case None =>
+//            Seq.fill(topRanked.size)(Set.empty[String])
+//        }
+//
+//        topRanked zip entityTypes
+//    }
+//  }
 
-        // Get all the possible pairs to consider and discard the already chosen
-        val newPairs = knowledgeGraph match {
-          case Some(kg) =>
-            for{
-              candidate <- kg.entities
-            } yield {
-              Seq((lastA, candidate), (lastB, candidate), (startTokens, candidate), (endTokens, candidate))
-            }
-          case None =>
-            Seq.empty
-        }
+def topEntities:Seq[CandidateEntity] = {
+  // Fetch the last set of entities chosen
+  entitySelectionList match {
+    // If there are no entities selected yet, return the end points
+    case Nil =>
+      val start = CandidateEntity(startTokens, Set(), Set())
+      val end = CandidateEntity(endTokens, Set(), Set())
+      Seq(start, end)
+    case (lastA, lastB)::_ =>
+      // Pre-compute a set for efficiency
+      val previouslyChosen = entitySelectionList.toSet
 
-        val criteria = WHConfig.Environment.entitySelection.toLowerCase match {
-          case "distance" => distance _
-          case "rank" => combineDegree _
-          case "lucene" => luceneExploitationScore _
-          case t =>
-            val message = s"Unimplemented entity selection criteria: $t"
-            logger.error(message)
-            throw new NotImplementedError(message)
-        }
-
-        // Filter out the elements that have been tested before
-        val pairsToTest =
-          newPairs.toSeq.flatten.filter{
-            case (a, b) =>
-              if(a == b)
-                false
-              else if(previouslyChosen contains ((a, b)))
-                false
-              else if(previouslyChosen contains ((b, a)))
-                false
-              else
-                true
+      // Get all the possible pairs to consider and discard the already chosen
+      val newPairs = knowledgeGraph match {
+        case Some(kg) =>
+          for{
+            candidate <- kg.entities
+          } yield {
+            Seq((lastA, candidate), (lastB, candidate), (startTokens, candidate), (endTokens, candidate))
           }
+        case None =>
+          Seq.empty
+      }
 
-        // Compute their distances in vector space
-        val scores = criteria(pairsToTest)
+      val criteria = WHConfig.Environment.entitySelection.toLowerCase match {
+        case "distance" => distance _
+        case "rank" => combineDegree _
+        case "lucene" => luceneExploitationScore _
+        case t =>
+          val message = s"Unimplemented entity selection criteria: $t"
+          logger.error(message)
+          throw new NotImplementedError(message)
+      }
 
-        // Take the top N entities by their distance
-        val topRanked =
-          (pairsToTest zip scores).sortBy(_._2).map(_._1._2).distinct.take(WHConfig.Environment.topEntitiesNum)
-
-        val entityTypes = knowledgeGraph match {
-          case Some(kg) =>
-            topRanked map (e => Set() ++ kg.entityTypes(e))
-          case None =>
-            Seq.fill(topRanked.size)(Set.empty[String])
+      // Filter out the elements that have been tested before
+      val pairsToTest =
+        newPairs.toSeq.flatten.filter{
+          case (a, b) =>
+            if(a == b)
+              false
+            else if(previouslyChosen contains ((a, b)))
+              false
+            else if(previouslyChosen contains ((b, a)))
+              false
+            else
+              true
         }
 
-        topRanked zip entityTypes
-    }
+      // Compute their distances in vector space
+      val scores = criteria(pairsToTest)
+
+      // Take the top N entities by their distance
+      val topRanked =
+        (pairsToTest zip scores).sortBy(_._2).map(_._1._2).distinct.take(WHConfig.Environment.topEntitiesNum)
+
+      val entityTypes = knowledgeGraph match {
+        case Some(kg) =>
+          topRanked map (e => Set() ++ kg.entityTypes(e))
+        case None =>
+          Seq.fill(topRanked.size)(Set.empty[String])
+      }
+
+      val entityOrigins = knowledgeGraph match {
+        case Some(kg) =>
+          topRanked map (e => Set() ++ kg.entitySources(e))
+        case None =>
+          Seq.fill(topRanked.size)(Set.empty[EntityOrigin])
+      }
+
+      (topRanked zip entityTypes zip entityOrigins)map {
+        case((lemmas, types), origins) =>
+          CandidateEntity(lemmas, types, origins)
+      }
   }
+}
 
 }
 

@@ -1,6 +1,7 @@
 package org.ml4ai.inference
 
-import org.clulab.processors.Document
+import org.clulab.processors.{Document, RelationTriple}
+import org.ml4ai.mdp.EntityOrigin
 import org.ml4ai.utils.{AnnotationsLoader, filterUselessLemmas}
 
 import scala.collection.mutable
@@ -32,23 +33,36 @@ class CoocurrenceKnowledgeGraph(documents:Iterable[(String,Document)]) extends N
       case (sIx, es) =>
         // Compute the entity lemmas
         val entityLemmas = es map (e => filterUselessLemmas(e.lemmas.get).toSet)
+        // Compute the entity intervals
+        val eOrigins = es map (e => EntityOrigin(hash, sIx, e.tokenInterval))
         // Compute the entity hashes
         val entityHashes = entityLemmas map groupedEntityHashes
 
-        for((e, lemmas) <- es zip entityLemmas){
+        for(((e, lemmas), origin) <- es zip entityLemmas zip eOrigins){
+          // Keep track of the lemmas
           val label = getNERLabel(e)
           if(entityTypes contains lemmas)
             entityTypes(lemmas) += label
           else
             entityTypes += (lemmas -> Set(label))
+
+          // Keep track of entity origins
+          if(entitySources contains lemmas)
+            entitySources(lemmas) += origin
+          else
+            entitySources += (lemmas -> Set(origin))
         }
+
 
         // Get all the pairs of entity hashes and compute their attribution
         (for{
-          a <- entityHashes
-          b <- entityHashes
+          (a, originA) <- entityHashes zip eOrigins
+          (b, originB) <- entityHashes zip eOrigins
           if a != b && a != 0 && b != 0
-        } yield (a, b, AttributingElement(None, sIx, hash))).toSet
+        } yield {
+          val triple = new RelationTriple(1.0f, originA.wordInterval, None, originB.wordInterval)
+          (a, b, AttributingElement(Some(triple), sIx, hash))
+        }).toSet
     }
 
   }
