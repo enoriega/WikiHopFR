@@ -8,7 +8,7 @@ object EntityOrigin {
   implicit def serialize(origin:EntityOrigin):JValue = {
     ("hash" -> origin.docHash) ~
       ("sen" -> origin.sentenceIx) ~
-      ("interval" -> origin.wordInterval.toString())
+      ("interval" -> Seq(origin.wordInterval.start, origin.wordInterval.end))
   }
 }
 
