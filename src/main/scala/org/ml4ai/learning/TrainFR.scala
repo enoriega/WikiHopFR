@@ -55,7 +55,7 @@ object TrainFR extends App with LazyLogging{
       compact {
         render {
           miniBatch map {
-            case Transition(state, action, reward, nextState) =>
+            case Transition(state, sId, action, reward, nextState, nsId) =>
 
               val features = state.toFeatures
 
@@ -150,23 +150,15 @@ object TrainFR extends App with LazyLogging{
                   ("originsA" -> originsA) ~
                   ("originsB" -> originsB)
                 ) ~
+                ("state_id" -> sId.toString) ~
                 ("action" ->
                   (action match {
                     case _: Exploitation => "exploitation"
                     case _ => "exploration"
                   })) ~
                 ("reward" -> reward) ~
-                ("new_state" -> state)
-//                  ("features" -> nextState.toFeatures) ~
-//                  ("candidates" -> nextStateCandidates) ~
-//                  ("candidatesTypes" -> nextStateCandidatesTypes) ~
-//                  ("candidatesOrigins" -> state.candidateEntitiesOrigins.get) ~
-//                  ("iterationsOfIntroduction" -> nextState.iterationsOfIntroduction) ~
-//                  ("ranks" -> nextState.ranks) ~
-//                  ("entityUsage" -> nextState.ranks)  ~
-//                  ("exploreScores" -> nextState.exploreScores) ~
-//                  ("exploitScores" -> nextState.exploitScores) ~
-//                  ("sameComponents" -> nextState.pairwiseComponents))
+                ("new_state" -> nextState) ~
+                ("new_state_id" -> nsId.toString)
           }
         }
       }

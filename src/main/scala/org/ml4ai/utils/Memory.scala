@@ -1,5 +1,7 @@
 package org.ml4ai.utils
 
+import java.util.UUID
+
 import org.ml4ai.learning.Transition
 
 import scala.collection.mutable
@@ -35,7 +37,10 @@ class Memory[A](val maxSize:Int = 100000) extends mutable.Queue[A]{
 class TransitionMemory(override val maxSize:Int = 100000) extends Memory[Transition] {
 
   def sampleWithReward(size:Int, p:Float)(implicit rng:Random):Iterable[Transition] = {
-    val (withReward, noReward) = this.partition(t => t.reward != 0)
+    val (withReward, noReward) = this.partition{
+      t => t.reward != 0
+    }
+
     val amountWReard = size * p
 
     val tempMemoryReward = new TransitionMemory(maxSize)

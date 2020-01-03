@@ -1,5 +1,7 @@
 package org.ml4ai
 
+import java.util.UUID
+
 import org.ml4ai.utils.{Memory, any}
 import org.scalatest.{FlatSpec, Matchers}
 

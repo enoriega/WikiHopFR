@@ -1,5 +1,7 @@
 package org.ml4ai.learning
 
+import java.util.UUID
+
 import com.typesafe.scalalogging.LazyLogging
 import org.ml4ai.WHConfig
 import org.ml4ai.agents.AgentObserver
@@ -29,7 +31,7 @@ class TrainingAgentObserver(epsilons:Iterator[Double]) extends AgentObserver wit
     assert(state.isDefined, "The state should be defined at this point")
     val newState = env.observeState
     val epsilon = epsilons.next()
-    val transition = Transition(state.get, action, reward, newState)
+    val transition = Transition(state.get, UUID.randomUUID(), action, reward, newState, UUID.randomUUID())
     memory remember transition
     state = None
     actionLog += Tuple3(epsilon, reward, action)
