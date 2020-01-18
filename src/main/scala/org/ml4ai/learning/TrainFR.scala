@@ -49,7 +49,7 @@ object TrainFR extends App with LazyLogging{
     */
   def updateParameters(network:Approximator)(implicit rng:Random):Unit = {
     // Sample a mini batch
-    val miniBatch = memory.sampleWithReward(5000, .8f)
+    val miniBatch = memory.sampleWithReward(1000, .8f)
 
     val payload =
       compact {
