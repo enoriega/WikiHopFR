@@ -1,6 +1,7 @@
 package org.ml4ai
 
 import com.typesafe.config.ConfigFactory
+import org.ml4ai.WHConfig.Lucene.HotPotQA
 
 import scala.util.{Failure, Success, Try}
 
@@ -18,6 +19,11 @@ object WHConfig {
     val graphvizDir: String = f.getString("graphvizDir")
     val benchmarkOutput: String = f.getString("benchmarkOutput")
     val glovePath:String = f.getString("glovePath")
+
+    object HotPotQA {
+      private val f = config.getConfig("files.hotpotqa")
+      val jsonPath: String = f.getString("jsonPath")
+    }
   }
 
   object PathFinder {
@@ -28,6 +34,9 @@ object WHConfig {
 
   object Lucene {
     val directoryIndex: String = config.getString("lucene.directoryIndex")
+    object HotPotQA{
+      val directoryIndex: String = config.getString("lucene.hotpotqa.directoryIndex")
+    }
   }
 
   object Embeddings {

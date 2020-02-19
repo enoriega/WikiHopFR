@@ -3,23 +3,22 @@ package org.ml4ai.ir
 import java.io.File
 
 import com.typesafe.scalalogging.LazyLogging
-import org.ml4ai.utils.WikiHopParser
-import org.apache.lucene.index.IndexWriterConfig
+import org.apache.lucene.index.{IndexWriter, IndexWriterConfig}
 import org.apache.lucene.store.NIOFSDirectory
-import org.apache.lucene.index.IndexWriter
 import org.ml4ai.WHConfig
 import org.ml4ai.ir.LuceneHelper.{addToIndex, analyzer}
+import org.ml4ai.utils.{HotPotParser, WikiHopParser}
 
 
-object IndexerApp extends App with LazyLogging {
+object HotPotIndexerApp extends App with LazyLogging {
 
-  val indexDir = new File(WHConfig.Lucene.directoryIndex)
+  val indexDir = new File(WHConfig.Lucene.HotPotQA.directoryIndex)
 
   if(!indexDir.exists()){
     indexDir.mkdirs()
   }
 
-  val documents = WikiHopParser.allDocuments
+  val documents = HotPotParser.allDocuments
   val index = new NIOFSDirectory(indexDir.toPath)
 
   val ixWConfig = new IndexWriterConfig(analyzer)
@@ -27,9 +26,9 @@ object IndexerApp extends App with LazyLogging {
   val w = new IndexWriter(index, ixWConfig)
 
   documents.zipWithIndex foreach {
-    case (d, i) =>
+    case ((title, contents), i) =>
       logger.info(s"indexing $i")
-      addToIndex(w, d)
+      addToIndex(w, contents)
   }
 
   w.commit()
