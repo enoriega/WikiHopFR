@@ -65,6 +65,7 @@ class AnnotationsLoader(path:String, cache:Boolean = false){
 
 object AnnotationsLoader extends App {
   private val annotationsPath = WHConfig.Files.annotationsFile
+//private val annotationsPath = WHConfig.Files.HotPotQA.annotationsFile
 
   val loader = new AnnotationsLoader(annotationsPath)
 

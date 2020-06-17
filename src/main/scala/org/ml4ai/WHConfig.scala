@@ -19,10 +19,13 @@ object WHConfig {
     val graphvizDir: String = f.getString("graphvizDir")
     val benchmarkOutput: String = f.getString("benchmarkOutput")
     val glovePath:String = f.getString("glovePath")
+    val wikificationPath:String = f.getString("wikificationPath")
+    val wikificationIndexPath:String = f.getString("wikificationIndex")
 
     object HotPotQA {
       private val f = config.getConfig("files.hotpotqa")
       val jsonPath: String = f.getString("jsonPath")
+      val annotationsFile: String = f.getString("annotationsFile")
     }
   }
 
