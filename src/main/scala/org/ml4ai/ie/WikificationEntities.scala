@@ -48,5 +48,4 @@ object WikificationEntities extends App {
     entries.filter(e => index.contains(e.docId)).groupBy(e => index(e.docId))
   }
 
-  print(readWikificationDataBase().size)
 }
