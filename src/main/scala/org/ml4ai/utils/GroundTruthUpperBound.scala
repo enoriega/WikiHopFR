@@ -37,7 +37,7 @@ object GroundTruthUpperBound extends App {
     }.toMap
 
   println("Generating the edges")
-  for((docHash, entries) <- wikificationEntities.take(1000).par){
+  for((docHash, entries) <- wikificationEntities.par){
     for(entry <- entries){
       val key = (docHash, entry.sentence)
       groupedEntries(key) += entry
