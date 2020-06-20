@@ -1,5 +1,7 @@
 package org.ml4ai.utils
 
+import java.io.PrintWriter
+
 import org.clulab.utils.Serializer
 import org.ml4ai.ie.{WikificationEntities, WikificationEntry}
 import org.ml4ai.inference.{AttributingElement, KBLabel, Relation}
@@ -35,7 +37,7 @@ object GroundTruthUpperBound extends App {
     }.toMap
 
   println("Generating the edges")
-  for((docHash, entries) <- wikificationEntities.par){
+  for((docHash, entries) <- wikificationEntities.take(1000).par){
     for(entry <- entries){
       val key = (docHash, entry.sentence)
       groupedEntries(key) += entry
@@ -83,7 +85,17 @@ object GroundTruthUpperBound extends App {
   }
 
   println("Saving result ...")
-  Serializer.save(edges.map(identity), s"edges_$sliceNum.ser")
+
+  val pw = new PrintWriter(s"edges_$sliceNum.txt")
+  for(((source, dest), attributions) <- edges){
+    val a = attributions.map(a => s"${a.document}-${a.sentenceIx}").mkString(", ")
+    val s = s"$source\t$dest\t$a\n"
+    pw.write(s)
+  }
+
+  pw.close()
+
+//  Serializer.save(edges.map(identity), s"edges_$sliceNum.ser")
 //
 //  // Build THE global graph
 //  // Build graph
