@@ -57,6 +57,7 @@ object GroundTruthUpperBound extends App {
   val slice = keys.slice(offset, offset + sliceSize)
   val entriesSize = slice.size
 
+  println(s"Slice $sliceNum")
   var ix = 0
   for((docHash, senIx) <- slice) {
     val entries = groupedEntries((docHash, senIx))
@@ -81,6 +82,7 @@ object GroundTruthUpperBound extends App {
     ix += 1
   }
 
+  println("Saving result ...")
   Serializer.save(edges.map(identity), s"edges_$sliceNum.ser")
 //
 //  // Build THE global graph
