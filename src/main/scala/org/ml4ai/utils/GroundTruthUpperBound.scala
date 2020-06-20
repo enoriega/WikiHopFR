@@ -42,14 +42,25 @@ object GroundTruthUpperBound extends App {
     }
   }
 
-  val entriesSize = groupedEntries.keys.toList.size
+
+  val size= groupedEntries.keySet.size
+  println(size)
+
 
   val edges = new mutable.HashMap[(Int, Int), mutable.ListBuffer[AttributingElement]]()
 
 
+  val keys = groupedEntries.keys.toList.sorted
+  val sliceNum = args(0).toInt - 1
+  val sliceSize = 10000
+  val offset = sliceNum * sliceSize
+  val slice = keys.slice(offset, offset + sliceSize)
+  val entriesSize = slice.size
+
   var ix = 0
-  for(((docHash, senIx), entries) <- groupedEntries) {
-    if((ix + 1)% 10000 == 0){
+  for((docHash, senIx) <- slice) {
+    val entries = groupedEntries((docHash, senIx))
+    if((ix + 1)% 1000 == 0){
       println(s"Elem ${ix + 1} of $entriesSize")
     }
     val observed = mutable.HashSet[(Int, Int)]()
@@ -70,15 +81,17 @@ object GroundTruthUpperBound extends App {
     ix += 1
   }
 
-  // Build THE global graph
-  // Build graph
-  println("Building the Graph")
-  val graph: Graph[Int, UnDiEdge] = Graph.from(edges = edges.map{
-    case((source, dest), _) =>
-      source ~ dest
-  }.seq)
-
-  print(graph.size)
-
-  Serializer.save(graph, "gt_graph.ser")
+  Serializer.save(edges.map(identity), s"edges_$sliceNum.ser")
+//
+//  // Build THE global graph
+//  // Build graph
+//  println("Building the Graph")
+//  val graph: Graph[Int, UnDiEdge] = Graph.from(edges = edges.map{
+//    case((source, dest), _) =>
+//      source ~ dest
+//  }.seq)
+//
+//  print(graph.size)
+//
+//  Serializer.save(graph, "gt_graph.ser")
 }
